@@ -6,7 +6,6 @@ var logger = require('morgan');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
-var authRouter = require("./routes/auth");
 
 var app = express();
 
@@ -21,7 +20,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-app.use("/auth", authRouter);
 
 app.use(function(req, res, next) {
   next(createError(404));
@@ -36,6 +34,8 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-app.listen(5000, () => console.log(`Server started on port 5000`));
+const Port = 3000
+
+app.listen(Port, () => console.log(`Server started on port ${Port}`));
 
 module.exports = app;
