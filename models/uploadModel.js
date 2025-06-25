@@ -14,7 +14,7 @@ const self = {};
  
 self.imgUploader = async (schema, table, params) => {
     try{
-        const query = `INSERT INTO ${table} ()`
+        const query = `UPDATE ${table} SET room_thumbnail_img = ${params.base64Image}) WHERE room_id = ${params.room_id}`;
         const ret = await db.query();
         
 
