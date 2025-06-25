@@ -34,12 +34,12 @@ router.get('/:id/participants', async (req, res, next) => {});
 router.get("/:id/participants/me", async (req, res, next) => {});
 
 // POST /rooms/:id/join 
-router.post("/:id/join ", async (req, res, next) => {});
+router.post("/:id/join", async (req, res, next) => {});
 
 // POST /rooms/:id/leave   
-router.post("/:id/leave ", async (req, res, next) => {});
+router.post("/:id/leave", async (req, res, next) => {});
 
 // PATCH /rooms/:id/participants/:userId
-router.patch("/:id/leave ", async (req, res, next) => {});
+router.patch("/:id/participants/:userId", async (req, res, next) => {});
 
 module.exports = router;
