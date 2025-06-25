@@ -1,54 +1,61 @@
 const db = require("../db/index");
 const { v4: uuidv4 } = require("uuid");
+const { getDate } = require("../modules/getData");
 require("dotenv").config();
 
 const USER_SCHEMA = process.env.DB_USER_SCHEMA;
 
-self = {};
+const userModel = {};
 
-self.findUserBySocialId = async (socialId) => {
+userModel.findUserBySocialId = async (socialId) => {
   const query = `SELECT * FROM ${USER_SCHEMA}.profiles WHERE social_id = $1 AND deleted = false`;
   const result = await db.query(query, [socialId]);
   return result.rows[0];
 }
 
-self.createUser = async (kakaoUser, profileData) => {
+userModel.createUser = async (kakaoUser) => {
   const {
     id: social_id,
     kakao_account: {
-      profile: { nickname: user_name }
+      profile: { nickname }
     }
   } = kakaoUser;
 
-  const {
-    user_nickname,
-    location,
-    user_bio,
-    user_profile_img
-  } = profileData;
-
   const query = `
     INSERT INTO ${USER_SCHEMA}.profiles (
-    user_id, provider, social_id, user_name, user_nickname,
-    user_profile_img, user_role, join_state, location, create_at,
-    update_at, nickname_update_at, deleted, emblem_id, like_temp, user_bio
+    user_id, social_id, user_name, user_nickname,
+    join_state, create_at, update_at, changed_at,
+    deleted, emblem_id, user_profile_img, user_bio
     ) VALUES (
-      $1, $2, $3, $4, $5,
-      $6, $7, $8, $9, $10,
-      $11, $12, $13, $14,
-      $15, $16
+      $1, $2, $3, $4, 
+      $5, $6, $7, $8, 
+      $9, $10, $11, $12
     ) RETURNING *;
   `;
 
   const values = [
-    uuidv4(), "kakao", social_id.toString(), user_name,
-    user_nickname, user_profile_img, "user", 0,
-    location, new Date(), new Date(), null, false,
-    null, 36.5, user_bio || null
+    uuidv4(), 
+    social_id.toString(), 
+    nickname,
+    nickname,
+    0,
+    getDate(0),
+    getDate(0),
+    getDate(30), 
+    false,
+    null,
+    "-",
+    ""
   ];
 
-  const result = await db.query(query, values);
-  return result.rows[0];
+  try {
+    const result = await db.query(query, values);
+    return result.rows[0];
+  } catch (err) {
+    console.log(err);
+    return err;
+  }
+
 }
 
-module.exports = self;
+module.exports = userModel;
