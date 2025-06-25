@@ -6,8 +6,8 @@ const USER_SCHEMA = process.env.DB_USER_SCHEMA;
 
 self = {};
 
-async function findUserBySocialId(socialId) {
-  const query = `SELECT * FROM user_schema.profiles WHERE social_id = $1 AND deleted = false`;
+self.findUserBySocialId = async (socialId) => {
+  const query = `SELECT * FROM ${USER_SCHEMA}.profiles WHERE social_id = $1 AND deleted = false`;
   const result = await db.query(query, [socialId]);
   return result.rows[0];
 }
