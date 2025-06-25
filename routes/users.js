@@ -25,13 +25,15 @@ router.put("/me/nickname", async (req, res) => {
   const newNickname = req.body.nickname;
 
   const user = await userModel.getNicknameChangeInfo(userId);
+  const changedAt = new Date(user.changed_at);
 
-  const nowStr = getDate(0);
   const limitStr = getDate(-30);
-  const changedAt = user.changed_at;
+  const limitDate = new Date(
+    `${limitStr.slice(0, 4)}-${limitStr.slice(4, 6)}-${limitStr.slice(6, 8)}T${limitStr.slice(9)}Z`
+  );
 
   // 30일 체크
-  if(user.user_nickname && changedAt > limitStr) {
+  if(user.user_nickname && changedAt > limitDate) {
     return res.status(400).json({ message: "닉네임 변경에 실패 했습니다.", nickname: newNickname });
   }
 
