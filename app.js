@@ -8,11 +8,8 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 // import router
 var dbConnRouter = require('./routes/db_conn');
-<<<<<<< HEAD
 var uploadRouter = require('./routes/upload');
-=======
 var authRouter = require("./routes/auth");
->>>>>>> origin
 // import router
 
 var app = express();
@@ -31,11 +28,8 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 //custom router
 app.use('/db-conn-test', dbConnRouter);
-<<<<<<< HEAD
 app.use('/upload', uploadRouter);
-=======
 app.use("/auth", authRouter);
->>>>>>> origin
 //custom router
 
 app.use(function(req, res, next) {
