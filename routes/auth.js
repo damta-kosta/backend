@@ -51,7 +51,7 @@ router.get("/kakao/callback", async (req, res) => {
     }
 
     // JWT 발급
-    const token = jwt.sign({ kakaoId }, process.env.JWT_SECRET, { expiresIn: "7d"});
+    const token = jwt.sign({ kakaoId, user_id: user.user_id }, process.env.JWT_SECRET, { expiresIn: "7d"});
 
     res.json({ accessToken: token, user });
   } catch(err) {

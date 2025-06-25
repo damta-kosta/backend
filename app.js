@@ -12,6 +12,8 @@ var uploadRouter = require('./routes/upload');
 var authRouter = require("./routes/auth");
 // import router
 
+const jwtMiddleware = require("./middlewares/jwtMiddleware");
+
 var app = express();
 const Port = 3000;
 
@@ -25,11 +27,12 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+
 //custom router
 app.use('/db-conn-test', dbConnRouter);
 app.use('/upload', uploadRouter);
 app.use("/auth", authRouter);
+app.use('/users', jwtMiddleware, usersRouter);
 //custom router
 
 app.use(function(req, res, next) {
