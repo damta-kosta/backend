@@ -8,6 +8,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 // import router
 var dbConnRouter = require('./routes/db_conn');
+var uploadRouter = require('./routes/upload');
 // import router
 
 var app = express();
@@ -26,7 +27,7 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 //custom router
 app.use('/db-conn-test', dbConnRouter);
-
+app.use('/upload', uploadRouter);
 //custom router
 
 app.use(function(req, res, next) {

@@ -22,4 +22,5 @@ router.get('/me/nickname', async (req, res, next) => {
   res.json(ret)
 });
 
+
 module.exports = router;
