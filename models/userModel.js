@@ -1,13 +1,15 @@
 const db = require("../db/index");
 const { v4: uuidv4 } = require("uuid");
 
-async function findUserBySocialId(socialId) {
+const self = {};
+
+self.findUserBySocialId = async (socialId) => {
   const query = `SELECT * FROM user_schema.profiles WHERE social_id = $1 AND deleted = false`;
   const result = await db.query(query, [socialId]);
   return result.rows[0];
 }
 
-async function createUser(kakaoUser, profileData) {
+self.createUser = async (kakaoUser, profileData) => {
   const {
     id: social_id,
     kakao_account: {
@@ -46,7 +48,4 @@ async function createUser(kakaoUser, profileData) {
   return result.rows[0];
 }
 
-module.exports = {
-  findUserBySocialId,
-  createUser
-};
+module.exports = self;
