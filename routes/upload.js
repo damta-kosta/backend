@@ -3,7 +3,6 @@ var express = require('express');
 var router = express.Router();
 const model = require('../models/uploadModel');
 
-/* upload */
 router.put('/', async (req, res, next) => {
     const params = req.query;
 
