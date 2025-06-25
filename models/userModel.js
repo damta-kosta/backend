@@ -1,13 +1,18 @@
 const db = require("../db/index");
 const { v4: uuidv4 } = require("uuid");
+require("dotenv").config();
 
-async function findUserBySocialId(socialId) {
-  const query = `SELECT * FROM user_schema.profiles WHERE social_id = $1 AND deleted = false`;
+const USER_SCHEMA = process.env.DB_USER_SCHEMA;
+
+self = {};
+
+self.findUserBySocialId = async(socialId) => {
+  const query = `SELECT * FROM ${USER_SCHEMA}.profiles WHERE social_id = $1 AND deleted = false`;
   const result = await db.query(query, [socialId]);
   return result.rows[0];
 }
 
-async function createUser(kakaoUser, profileData) {
+self.createUser = async (kakaoUser, profileData) => {
   const {
     id: social_id,
     kakao_account: {
@@ -23,7 +28,7 @@ async function createUser(kakaoUser, profileData) {
   } = profileData;
 
   const query = `
-    INSERT INTO user_schema.profiles (
+    INSERT INTO ${USER_SCHEMA}.profiles (
     user_id, provider, social_id, user_name, user_nickname,
     user_profile_img, user_role, join_state, location, create_at,
     update_at, nickname_update_at, deleted, emblem_id, like_temp, user_bio
@@ -46,7 +51,4 @@ async function createUser(kakaoUser, profileData) {
   return result.rows[0];
 }
 
-module.exports = {
-  findUserBySocialId,
-  createUser
-};
+module.exports = self;
