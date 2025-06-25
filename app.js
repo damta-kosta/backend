@@ -11,6 +11,7 @@ var dbConnRouter = require('./routes/db_conn');
 // import router
 
 var app = express();
+const Port = 3000;
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -40,7 +41,6 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-const Port = 3000
 
 app.listen(Port, () => console.log(`Server started on port ${Port}`));
 
