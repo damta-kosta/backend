@@ -1,6 +1,7 @@
-var express = require('express');
-var router = express.Router();
-const model = require('../models/userExam')
+const express = require("express");
+const router = express.Router();
+const userModel = require("../models/userModel");
+const jwt = require("jsonwebtoken");
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
@@ -10,16 +11,6 @@ router.get('/', function(req, res, next) {
   res.json(ret);
 });
 
-router.get('/me', async (req, res, next) => {
 
-  const ret = await model.test1();
-
-  res.json(ret);
-});
-
-router.get('/me/nickname', async (req, res, next) => {
-  const ret = await model.test2();
-  res.json(ret)
-});
 
 module.exports = router;

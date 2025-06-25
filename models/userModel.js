@@ -41,7 +41,7 @@ userModel.createUser = async (kakaoUser) => {
     0,
     getDate(0),
     getDate(0),
-    getDate(30), 
+    getDate(0), 
     false,
     null,
     "-",
