@@ -11,6 +11,7 @@ var dbConnRouter = require('./routes/db_conn');
 var uploadRouter = require('./routes/upload');
 var authRouter = require("./routes/auth");
 var roomRouter = require("./routes/rooms");
+var communityRouter = require("./routes/community");
 // import router
 
 const jwtMiddleware = require("./middlewares/jwtMiddleware");
@@ -35,6 +36,7 @@ app.use('/upload', jwtMiddleware, uploadRouter);
 app.use("/auth", authRouter);
 app.use('/users', jwtMiddleware, usersRouter);
 app.use('/rooms', jwtMiddleware, roomRouter);
+app.use("/community", jwtMiddleware, communityRouter);
 //custom router
 
 app.use(function(req, res, next) {
