@@ -10,6 +10,7 @@ var usersRouter = require('./routes/users');
 var dbConnRouter = require('./routes/db_conn');
 var uploadRouter = require('./routes/upload');
 var authRouter = require("./routes/auth");
+var roomRouter = require("./routes/rooms");
 // import router
 
 const jwtMiddleware = require("./middlewares/jwtMiddleware");
@@ -30,9 +31,10 @@ app.use('/', indexRouter);
 
 //custom router
 app.use('/db-conn-test', dbConnRouter);
-app.use('/upload', uploadRouter);
+app.use('/upload', jwtMiddleware, uploadRouter);
 app.use("/auth", authRouter);
 app.use('/users', jwtMiddleware, usersRouter);
+app.use('/rooms', jwtMiddleware, roomRouter);
 //custom router
 
 app.use(function(req, res, next) {

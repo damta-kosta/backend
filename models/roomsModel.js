@@ -22,19 +22,78 @@ const self = {};
  * @return  {json}
  */
 self.createRoom = async (params) => {
+    // console.log("params: ", params.roomHost);
+    const roomID = uuidv4();
+    const now = getDate(0);
+
+    const ret = {};
+    ret.title = params.roomTitle
+    ret.thumbnailBase64 = params.roomThumbnailImg
+    
+    const values = [
+        roomID, // 1
+        params.roomThumbnailImg, //2
+        params.roomTitle, //3
+        params.roomDescription,//4 
+        params.maxParticipants, //5
+        now,//6 
+        params.roomEndedAt, //7
+        params.roomHost, //8
+        params.roomHost//9
+    ]
+
     const query = `INSERT INTO ${MAIN_SCHEMA}.room_info (
     room_id, room_thumbnail_img, room_title, room_description, max_participants, 
     room_created_at, room_ended_at, room_host, current_participants ) 
-    VALUES (${uuidv4()}, ${params.roomThumbnailImg}, ${params.roomTitle}, 
-    ${params.roomDescription}, ${params.maxParticipants}, ${getDate(0)},
-    ${params.roomEndedAt}, ${params.roomHost}, ${params.roomHost})`;
+    VALUES (
+        $1, $2, $3, 
+        $4, $5, $6,
+        $7, $8, $9
+    )`;
     
     try {
-        const ret = await db.query(query);
+        await db.query(query, values);
+        
+        ret.room_id = roomID;
+        ret.message = "모임이 성공적으로 생성되었습니다.";
+        
         return ret;
     } catch(err) {
-        return err;
+        ret.message = "모임방을 생성하는데 문제가 발생하였습니다.";
+        console.log(err);
+        return ret;
     }
+
+}
+
+/**
+ * 현재 호스트로 활동중인지 확인하는 메소드
+ * @param {uuidv4} userId 호스트가 될 유저 아이디
+ * @returns {boolean} 호스트일 경우 true, 아닐 경우 false 반환
+ */
+self.isHost = async (userId) => {
+    const ret = {};
+    console.log(userId);
+    const query = {
+        text: `SELECT COUNT(*) FROM ${MAIN_SCHEMA}.room_info WHERE room_host = $1`,
+        values: [userId]
+    };
+
+    try {
+        ret.res = await db.query(query);
+        if(Number(ret.res.rows[0].count)) return true;        
+
+        return false;
+    } catch(err) {
+        return true;;
+    }
+}
+
+/**
+ * 방 정보 수정
+ * @param {*} params 
+ */
+self.updateRoomInfo = async (params) => {
 
 }
 

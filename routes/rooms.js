@@ -5,16 +5,37 @@ const roomModules = require('../models/roomsModel');
 
 // rooms router
 // POST /rooms/
+/**
+ * need info
+ * 방 생성 모듈
+ * roomTitle (방 제목),
+ * roomHost (방 호스트),
+ * roomDescription (방 설명 (생략 가능)),
+ * maxParticipants (최대 참여 가능 인원 (2 ~ 4명)),
+ * currentParticipants (현재 참여 인원 (host uuid)),
+ * roomEndedAt (방 종료 시간),
+ * roomThumbnailImg (방 썸네일 이미지)
+ */
 router.post('/', async (req, res, next) => {
-    const params = req.query;
-    const ret = await roomModules.createRoom(params);
+    const body = req.body;
+    const ret = {
+        res: {}
+    };
+    const isHost = await roomModules.isHost(body.roomHost);
 
-    res.json(ret);
+    if(!isHost) ret.res = await roomModules.createRoom(body);
+    else ret.res.message = "모임방을 생성하는데 문제가 발생하였습니다."
+
+    res.json(ret.res);
 });
 
 // PATCH /rooms/:id
+/**
+ * 방 정보 수정
+ */
 router.patch('/:id', async (req, res, next) => {
-
+    const body = req.body;
+    
 });
 
 // PATCH /rooms/:id/deactivate 

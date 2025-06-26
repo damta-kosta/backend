@@ -22,9 +22,6 @@ self.getDate = (seed) => {
   dateObj.time = " " + today.getHours().toString() + ":" + today.getMinutes().toString() + ":" + today.getSeconds().toString();
 
   const ret = dateObj.year + dateObj.month + dateObj.day + dateObj.time;
-
-
-  console.log(day);
   return ret;
 }
 
