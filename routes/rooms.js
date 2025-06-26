@@ -6,7 +6,8 @@ const roomModules = require('../models/roomsModel');
 // rooms router
 // POST /rooms/
 router.post('/', async (req, res, next) => {
-    const ret = await roomModules.createRoom();
+    const params = req.query;
+    const ret = await roomModules.createRoom(params);
 
     res.json(ret);
 });
