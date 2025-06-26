@@ -8,11 +8,19 @@ router.post("/write", async (req, res) => {
     const {title, content, imageBase64 } = req.body;
     const userId = req.user.user_id;
 
+    if(!userId) {
+      return res.status(401).json({ message: "로그인이 필요합니다." });
+    }
+
     const result = await communityModel.createPost(userId, title, content, imageBase64);
     res.status(201).json({ community_id: result.community_id, message: "게시글이 등록되었습니다." });
   }catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "게시글 등록 중 오류가 발생했습니다."});
+    console.error("게시글 작성 오류:", err);
+    if(err.status === 403) {
+      res.status(403).json({ message: err.message });
+    } else {
+      res.status(500).json({ message: "게시글 등록 중 오류가 발생했습니다."});
+    }
   }
 })
 
@@ -43,11 +51,21 @@ if (hasNext && posts.length > 1) {
 router.patch("/:id/delete", async (req, res) => {
   try {
     const communityId = req.params.id;
+    const userId = req.user?.user_id;
+
+    if(!userId) {
+      return res.status(401).json({ message: "로그인이 필요합니다." });
+    }
+
     await communityModel.deletePost(communityId);
     res.json({ message: "게시글이 삭제되었습니다." });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "게시글 삭제 중 오류가 발생했습니다." });
+    console.error("게시글 삭제 오류:", err);
+    if(err.status === 403 || err.status === 404) {
+      res.status(err.status).json({ message: err.message });
+    } else {
+      res.status(500).json({ message: "게시글 삭제 중 오류가 발생했습니다." });
+    }
   }
 });
 

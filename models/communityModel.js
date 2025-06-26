@@ -20,6 +20,18 @@ communityModel.createPost = async(userId, title, content, imageBase64) => {
   const uuid = uuidv4();
   const now = getDate(0);
 
+  const checkUserQuery = `
+    SELECT 1 FROM ${USER_SCHEMA}.profiles
+    WHERE user_id = $1 AND deleted = false
+  `;
+  const checkResult = await db. query(checkUserQuery, [userId]);
+
+  if(checkResult.rowCount === 0) {
+    const error = new Error("작석 권한이 없습니다. (유효하지 않은 사용자)");
+    error.status = 403;
+    throw error;
+  }
+
   const query = `
     INSERT INTO ${MAIN_SCHEMA}.community (
     community_id, community_writer, community_title,
@@ -64,12 +76,9 @@ communityModel.getPosts = async (cursor, limit) => {
   `;
   values.push(limit);
 
-  console.log("Executing query:", query, "with values:", values);
   const result = await db.query(query, values);
-  console.log("Query result:", result.rows);
   return result.rows;
 };
-
 
 /**
  * 게시글 삭제 (soft delete)
@@ -77,7 +86,26 @@ communityModel.getPosts = async (cursor, limit) => {
  * @param {string} communityId - 삭제할 게시글의 UUID
  * @returns {void}
  */
-communityModel.deletePost = async(communityId) => {
+communityModel.deletePost = async(communityId, userId) => {
+  const checkQuery = `
+    SELECT community_writer FROM ${MAIN_SCHEMA}.community
+    WHERE community_id = $1 AND deleted = false
+  `;
+  const checkResult = await db.query(checkQuery, [communityId]);
+
+  if(checkResult.rowCount === 0) {
+    const error = new Error("존재하지 않거나 이미 삭제된 게시글 입니다.");
+    error.status = 404;
+    throw error;
+  }
+
+  // const writerId = checkResult.rows[0].community_writer;
+  // if(writerId !== userId) {
+  //   const error = new Error("본인의 게시글만 삭제할 수 잇습니다.");
+  //   error.status = 403;
+  //   throw error;
+  // }
+
   const query = `
     UPDATE ${MAIN_SCHEMA}.community
     SET deleted = true
