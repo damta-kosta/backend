@@ -73,7 +73,7 @@ self.createRoom = async (params) => {
  */
 self.isHost = async (userId) => {
     const ret = {};
-    console.log(userId);
+    
     const query = {
         text: `SELECT COUNT(*) FROM ${MAIN_SCHEMA}.room_info WHERE room_host = $1`,
         values: [userId]

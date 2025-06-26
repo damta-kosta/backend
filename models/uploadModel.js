@@ -7,19 +7,26 @@ const self = {};
  *  공통 이미지 업로드 메소드
  * 
  *  @param {string} schema 스키마
- *  @param {string} table 테이블
- *  @param {json} params base64 encoding 이미지와 target entity, target user
+ *  @param {json} params base64 encoding 이미지와 target entity, target user, table 
  *  @return {json}
  */
  
-self.imgUploader = async (schema, table, params) => {
+self.imgUploader = async (schema, params) => {
+    const query = {
+        text: `UPDATE ${schema}.${params.table} SET ${params.target} = ${params.base64Image} 
+        WHERE ${params.column} = $1`,
+        values: [params.uuid]
+    };
+
+    console.log(query);
+
     try{
-        const query = `UPDATE ${schema}.${table} SET ${params.target} = ${params.base64Image}) WHERE room_id = ${params.uuid}`;
         const ret = await db.query(query);
 
-        res.send(ret);
+        return ret;
     } catch (err) {
-        res.status(500).send("err");
+        console.log(err)
+        return err;
     }
 }
 
