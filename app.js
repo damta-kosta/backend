@@ -12,6 +12,7 @@ var uploadRouter = require('./routes/upload');
 var authRouter = require("./routes/auth");
 var roomRouter = require("./routes/rooms");
 var communityRouter = require("./routes/community");
+var commentsRouter = require("./routes/comments");
 // import router
 
 const jwtMiddleware = require("./middlewares/jwtMiddleware");
@@ -37,6 +38,7 @@ app.use("/auth", authRouter);
 app.use('/users', jwtMiddleware, usersRouter);
 app.use('/rooms', jwtMiddleware, roomRouter);
 app.use("/community", jwtMiddleware, communityRouter);
+app.use("/comments", jwtMiddleware, commentsRouter);
 //custom router
 
 app.use(function(req, res, next) {
