@@ -30,7 +30,8 @@ router.post("/assign", async (req, res) => {
       message: "엠블럼이 등록되었습니다.",
       emblem: {
         emblem_id,
-        emblem_name
+        emblem_name,
+        emblem_description
       }
     });
 
@@ -56,7 +57,7 @@ router.get("/", async (req, res) => {
 });
 
 
-// /emblems/:emblem_name
+// DELETE /emblems/:emblem_name
 router.delete("/:emblem_name", async (req, res) => {
   const { emblem_name } = req.params;
 
