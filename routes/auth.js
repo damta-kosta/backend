@@ -4,6 +4,7 @@ const axios = require("axios");
 const jwt = require("jsonwebtoken");
 const authModel = require("../models/authModel");
 const myDate = require('../modules/getData');
+const emblemAssigner = require("../modules/emblemAssigner");
 
 require("dotenv").config();
 
@@ -53,7 +54,20 @@ router.get("/kakao/callback", async (req, res) => {
     // JWT 발급
     const token = jwt.sign({ kakaoId, user_id: user.user_id }, process.env.JWT_SECRET, { expiresIn: "7d"});
 
-    res.json({ accessToken: token, user });
+    // 엠블럼 정보 추가
+    const emblem = await emblemAssigner.getEmblemInfoByLikeTemp(user.like_temp);
+
+    res.json({
+      accessToken: token,
+      user: {
+        ...user,
+        emblem: emblem ? {
+          emblem_id: emblem.emblem_id,
+          emblem_name: emblem.emblem_name,
+          emblem_description: emblem.emblem_description
+        } : null
+      }
+    });
   } catch(err) {
     console.error(err.response?.data || err);
     res.status(500).send("Kakao login failed");

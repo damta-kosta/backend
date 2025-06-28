@@ -1,22 +1,32 @@
 const express = require("express");
 const router = express.Router();
 const userModel = require("../models/userModel");
+const emblemAssigner = require("../modules/emblemAssigner");
 const { getDate } = require("../modules/getData");
 
 // GET /api/users/me 현재 로그인한 유저의 프로필 정보 + 엠블럼 조회
 router.get("/me", async (req, res) => {
-  const user = await userModel.getUserById(req.user.user_id);
-  if(!user) return res.status(404).json({ message: "유저 없음" });
+  try {
+    const user = await userModel.getUserById(req.user.user_id);
+    if(!user) return res.status(404).json({ message: "유저 없음" });
 
-  const { emblem_id, emblem_name, emblem_description, ...rest } = user;
-  res.json({
-    ...rest,
-    emblem: emblem_id ? {
-      emblem_id,
-      emblem_name,
-      emblem_description
-    } : null
-  });
+    const { emblem_id, emblem_name, emblem_description, ...rest } = user;
+
+    // like_temp 기준 엠블럼 정보 조회
+    const emblem = await emblemAssigner.getEmblemInfoByLikeTemp(user.like_temp);
+
+    res.json({
+      ...rest,
+      emblem: emblem ? {
+        emblem_id: emblem.emblem_id,
+        emblem_name: emblem.emblem_name,
+        emblem_description: emblem.emblem_description
+      } : null
+    });
+  }catch(err) {
+    console.error("GET /users/me error:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
 });
 
 // PUT /api/users/me/nickname 닉네임 변경 (한번 변경후 30일 제한)
