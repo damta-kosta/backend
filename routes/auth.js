@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
-const userModel = require("../models/authModel");
+const authModel = require("../models/authModel");
 const myDate = require('../modules/getData');
 
 require("dotenv").config();
@@ -43,11 +43,11 @@ router.get("/kakao/callback", async (req, res) => {
     const kakaoId = kakaoUser.id;
 
     // DB에서 사용자 조회
-    let user = await userModel.findUserBySocialId(kakaoId);
+    let user = await authModel.findUserBySocialId(kakaoId);
 
     // 없으면 신규 가입
     if(!user) {
-      user = await userModel.createUser(kakaoUser);
+      user = await authModel.createUser(kakaoUser);
     }
 
     // JWT 발급

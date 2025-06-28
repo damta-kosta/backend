@@ -5,15 +5,15 @@ require("dotenv").config();
 
 const USER_SCHEMA = process.env.DB_USER_SCHEMA;
 
-const userModel = {};
+const authModel = {};
 
-userModel.findUserBySocialId = async (socialId) => {
+authModel.findUserBySocialId = async (socialId) => {
   const query = `SELECT * FROM ${USER_SCHEMA}.profiles WHERE social_id = $1 AND deleted = false`;
   const result = await db.query(query, [socialId]);
   return result.rows[0];
 }
 
-userModel.createUser = async (kakaoUser) => {
+authModel.createUser = async (kakaoUser) => {
   const {
     id: social_id,
     kakao_account: {
@@ -58,4 +58,4 @@ userModel.createUser = async (kakaoUser) => {
 
 }
 
-module.exports = userModel;
+module.exports = authModel;
