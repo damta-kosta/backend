@@ -1,13 +1,24 @@
 require('dotenv').config();
-var express = require('express');
-var router = express.Router();
+const express = require('express');
+const router = express.Router();
 const model = require('../models/uploadModel');
 
-router.post('/', async (req, res, next) => {
-    const body = req.body;
-    const ret = await model.imgUploader(process.env.DB_MAIN_SCHEMA, body);
+// POST /api/upload
+router.post('/', async (req, res) => {
+  const body = req.body;
 
-    res.json(ret);
+  try {
+    const result = await model.imgUploader(process.env.DB_MAIN_SCHEMA, body);
+
+    if (result.error) {
+      return res.status(400).json(result);
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error("Upload error:", err);
+    res.status(500).json({ error: "서버 오류 발생" });
+  }
 });
 
 module.exports = router;

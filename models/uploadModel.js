@@ -13,22 +13,20 @@ const self = {};
  
 self.imgUploader = async (schema, params) => {
     const query = {
-        text: `UPDATE ${schema}.${params.table} SET ${params.target} = ${params.base64Image} 
-        WHERE ${params.column} = $1`,
-        values: [params.uuid]
+        text: `UPDATE ${schema}.${params.table} SET ${params.target} = $1
+        WHERE ${params.column} = $2`,
+        values: [params.base64Image, params.uuid]
     };
 
     console.log(query);
 
     try{
-        const ret = await db.query(query);
-
-        return ret;
+        const result = await db.query(query);
+        return { success: true, rowCount: result.rowCount };
     } catch (err) {
-        console.log(err)
-        return err;
+        console.error("imgUploader error:", err);
+        return { error: '이미지 업로드 실패', detail: err.message };
     }
 }
-
 
 module.exports = self;
