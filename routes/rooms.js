@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 
-const roomModules = require('../models/roomsModel');
+const roomsModel = require('../models/roomsModel');
 
 // rooms router
 // POST /rooms/
@@ -21,9 +21,9 @@ router.post('/', async (req, res, next) => {
     const ret = {
         res: {}
     };
-    const isHost = await roomModules.isHost(body.roomHost);
+    const isHost = await roomsModel.isHost(body.roomHost);
 
-    if(!isHost) ret.res = await roomModules.createRoom(body);
+    if(!isHost) ret.res = await roomsModel.createRoom(body);
     else ret.res.message = "모임방을 생성하는데 문제가 발생하였습니다."
 
     res.json(ret.res);
