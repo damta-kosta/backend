@@ -200,8 +200,8 @@ roomsModel.getRoomParticipants = async (roomId) => {
 
 /**
  * 방 참가
- * @param {string} roomId 
- * @param {string} userId 
+ * @param {string} roomId - 참가할 방 UUID
+ * @param {string} userId - 참가자 UUID
  * @returns {Promise<object>}
  */
 roomsModel.joinRoom = async (roomId, userId) => {
@@ -221,21 +221,35 @@ roomsModel.joinRoom = async (roomId, userId) => {
       };
     }
 
-    // 이미 참가 중인지 확인
+    // 이미 참가 중인 방 개수 확인
+    const joinedCountQuery = `
+      SELECT COUNT(*) FROM ${MAIN_SCHEMA}.participants 
+      WHERE participants_user_id = $1
+    `;
+    const countRes = await db.query(joinedCountQuery, [userId]);
+    if (parseInt(countRes.rows[0].count, 10) >= 2) {
+      return { error: "이미 두 개의 모임에 참여 중입니다." };
+    }
+
+    // 중복 참가 확인
     const existQuery = `
       SELECT 1 FROM ${MAIN_SCHEMA}.participants 
       WHERE room_id = $1 AND participants_user_id = $2
     `;
-    
     const exist = await db.query(existQuery, [roomId, userId]);
     if (exist.rowCount > 0) {
       return { error: "이미 해당 모임에 참여 중입니다." };
     }
 
-    // 전체 참여 방 개수 확인
-    const totalRoomCount = await roomsModel.getActiveRoomCount(userId);
-    if (totalRoomCount >= 2) {
-      return { error: "이미 두 개의 모임에 참여 중입니다." };
+    // 참가 가능 인원 확인 (최대 4명으로 고정)
+    const currentCountQuery = `
+      SELECT COUNT(*) FROM ${MAIN_SCHEMA}.participants
+      WHERE room_id = $1
+    `;
+    const currentCountRes = await db.query(currentCountQuery, [roomId]);
+    const currentParticipants = parseInt(currentCountRes.rows[0].count, 10);
+    if (currentParticipants >= 4) {
+      return { error: "이 방은 이미 정원(4명)이 가득 찼습니다." };
     }
 
     // 참가 처리
@@ -256,10 +270,13 @@ roomsModel.joinRoom = async (roomId, userId) => {
   }
 };
 
+
 /**
  * 방 나가기
- * @param {string} roomId 
- * @param {string} userId 
+ * 방장은 직접 나갈 수 없고 방을 비활성화해야 함
+ * 
+ * @param {string} roomId - 방 UUID
+ * @param {string} userId - 유저 UUID
  * @returns {Promise<object>}
  */
 roomsModel.leaveRoom = async (roomId, userId) => {
@@ -267,11 +284,11 @@ roomsModel.leaveRoom = async (roomId, userId) => {
     // 호스트 여부 확인
     const hostCheckQuery = `
       SELECT room_host FROM ${MAIN_SCHEMA}.room_info
-      WHERE room_id = $1
+      WHERE room_id = $1 AND deleted = false
     `;
     const hostResult = await db.query(hostCheckQuery, [roomId]);
-    if (hostResult.rows.length === 0) {
-      return { error: "방이 존재하지 않습니다." };
+    if (hostResult.rowCount === 0) {
+      return { error: "모임방이 존재하지 않습니다." };
     }
     if (hostResult.rows[0].room_host === userId) {
       return {
@@ -279,17 +296,17 @@ roomsModel.leaveRoom = async (roomId, userId) => {
       };
     }
 
-    // 참가 여부 확인
+    // 참여 여부 확인
     const existQuery = `
       SELECT 1 FROM ${MAIN_SCHEMA}.participants 
       WHERE room_id = $1 AND participants_user_id = $2
     `;
     const exist = await db.query(existQuery, [roomId, userId]);
     if (exist.rowCount === 0) {
-      return { error: "방에 참여 중이 않아 나갈 수 없습니다." };
+      return { error: "해당 모임에 참여 중이 아니어서 나갈 수 없습니다." };
     }
 
-    // 삭제 처리
+    // 참여자 삭제 처리
     const deleteQuery = `
       DELETE FROM ${MAIN_SCHEMA}.participants
       WHERE room_id = $1 AND participants_user_id = $2
@@ -302,7 +319,10 @@ roomsModel.leaveRoom = async (roomId, userId) => {
     };
   } catch (err) {
     console.error("leaveRoom error:", err);
-    return { message: "방 나가기 실패" };
+    return {
+      message: "모임 나가기 중 문제가 발생했습니다.",
+      error: err.message
+    };
   }
 };
 
