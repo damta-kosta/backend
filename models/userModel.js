@@ -23,13 +23,13 @@ userModel.getUserById = async (userId) => {
   const user = profileResult.rows[0];
   if (!user) return null;
 
-  // 내가 호스트이거나 참가자인 모든 활성화 방 room_id 중복 없이 조회
+  // 진행 중인 방만 기준으로 join_state 계산
   const activeRoomQuery = `
     SELECT COUNT(DISTINCT r.room_id) AS count
     FROM ${MAIN_SCHEMA}.room_info r
     LEFT JOIN ${MAIN_SCHEMA}.participants p ON r.room_id = p.room_id
-    WHERE r.deleted = false
-      AND (r.room_host = $1 OR p.participants_user_id = $1)
+    WHERE r.deleted = false AND r.room_ended_at > NOW()
+    AND (r.room_host = $1 OR p.participants_user_id = $1)
   `;
 
   const roomResult = await db.query(activeRoomQuery, [userId]);
@@ -40,6 +40,7 @@ userModel.getUserById = async (userId) => {
     join_state,
   };
 };
+
 
 
 
