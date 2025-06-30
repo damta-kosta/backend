@@ -6,6 +6,8 @@ require("dotenv").config();
 const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
 const USER_SCHEMA = process.env.DB_USER_SCHEMA;
 
+const roomsModel = {};
+
 /**
  * 현재 호스트로 활동중인지 확인하는 메소드
  * @param {string} userId - 유저 UUID
@@ -20,6 +22,7 @@ roomsModel.isHost = async (userId) => {
 
   try {
     const result = await db.query(query, [userId]);
+    console.log("호스트 중인 방 개수:", result.rows[0].count);
     return Number(result.rows[0].count) > 0;
   } catch (err) {
     console.error("isHost error:", err);
@@ -74,9 +77,20 @@ roomsModel.getActiveRoomCount = async (userId) => {
  */
 roomsModel.createRoom = async (params) => {
   const roomId = uuidv4();
+  const participantId = uuidv4();
   const now = getDate(0);
 
   try {
+    // 방장 UUID 누락 시 예외 처리
+    if (!params.roomHost) {
+      return { error: "방 생성에 필요한 호스트 정보가 누락되었습니다." };
+    }
+
+    // roomEndedAt 자동 계산: roomScheduled 당일 23:59:00으로 설정
+    const scheduledDate = new Date(params.roomScheduled);
+    scheduledDate.setHours(23, 59, 0, 0);
+    const roomEndedAt = scheduledDate.toISOString();
+
     // 현재 호스트인지 확인
     const isHost = await roomsModel.isHost(params.roomHost);
     if (isHost) {
@@ -93,10 +107,10 @@ roomsModel.createRoom = async (params) => {
       INSERT INTO ${MAIN_SCHEMA}.room_info (
         room_id, room_thumbnail_img, room_title, room_description,
         max_participants, room_created_at, room_ended_at,
-        room_host, current_participants, deleted
+        room_scheduled, room_host, current_participants, deleted
       ) VALUES (
         $1, $2, $3, $4, $5,
-        $6, $7, $8, $9, false
+        $6, $7, $8, $9, $10, false
       )
     `;
 
@@ -107,12 +121,21 @@ roomsModel.createRoom = async (params) => {
       params.roomDescription || null,
       params.maxParticipants,
       now,
-      params.roomEndedAt,
+      roomEndedAt,
+      params.roomScheduled,
       params.roomHost,
       params.roomHost
     ];
 
+    // room_info에 방 정보 insert
     await db.query(query, values);
+    
+    // 호스트를 participants 테이블에 자동 등록
+    await db.query(`
+      INSERT INTO ${MAIN_SCHEMA}.participants (participants_id, room_id, participants_user_id)
+      VALUES ($1, $2, $3)
+    `, [participantId, roomId, params.roomHost]);
+
     return {
       room_id: roomId,
       title: params.roomTitle,
@@ -121,7 +144,7 @@ roomsModel.createRoom = async (params) => {
     };
   } catch (err) {
     console.error("createRoom error:", err);
-    return { message: "모임방을 생성하는데 문제가 발생하였습니다." };
+    return { error: "모임방을 생성하는데 문제가 발생하였습니다." };
   }
 };
 
@@ -132,7 +155,7 @@ roomsModel.createRoom = async (params) => {
 roomsModel.updateRoomInfo = async (roomId, params) => {
   const query = `
     UPDATE ${MAIN_SCHEMA}.room_info
-    SET room_title = $1, room_description = $2, room_thumbnail_img = $3, room_updated_at = $4
+    SET room_title = $1, room_description = $2, room_thumbnail_img = $3, room_scheduled = $4
     WHERE room_id = $5 AND deleted = false
   `;
 
@@ -140,7 +163,7 @@ roomsModel.updateRoomInfo = async (roomId, params) => {
     params.roomTitle,
     params.roomDescription || null,
     params.roomThumbnailImg,
-    getDate(0),
+    params.roomScheduled,
     roomId
   ];
 
@@ -154,25 +177,38 @@ roomsModel.updateRoomInfo = async (roomId, params) => {
 };
 
 /**
- * 방 비활성화 (soft delete)
+ * 방 비활성화 (soft delete) + 참가자 제거
  * 
  * @param {string} roomId - 방 UUID
  * @returns {Promise<object>}
  */
 roomsModel.deactivateRoom = async (roomId) => {
-  const query = `
-    UPDATE ${MAIN_SCHEMA}.room_info
-    SET deleted = true, room_updated_at = $1
-    WHERE room_id = $2
-  `;
-  const values = [getDate(0), roomId];
+  const client = await db.connect();
 
   try {
-    await db.query(query, values);
+    await client.query("BEGIN");
+
+    await client.query(
+      `UPDATE ${MAIN_SCHEMA}.room_info
+      SET deleted = true
+      WHERE room_id = $1`,
+      [roomId]
+    );
+
+    await client.query(
+      `DELETE FROM ${MAIN_SCHEMA}.participants
+      WHERE room_id = $1`,
+      [roomId]
+    );
+
+    await client.query("COMMIT");
     return { message: "모임이 비활성화되었습니다." };
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("deactivateRoom error:", err);
     return { message: "모임 비활성화 실패" };
+  } finally {
+    client.release();
   }
 };
 
@@ -185,10 +221,12 @@ roomsModel.deactivateRoom = async (roomId) => {
 roomsModel.getRoomParticipants = async (roomId) => {
   const query = `
     SELECT p.user_id, p.user_nickname, p.user_profile_img, (r.room_host = p.user_id) AS is_host
-    FROM ${USER_SCHEMA}.profiles p
-    INNER JOIN ${MAIN_SCHEMA}.room_info r ON r.room_id = $1
-    WHERE p.user_id = ANY(r.current_participants)
+    FROM ${MAIN_SCHEMA}.participants pa
+    INNER JOIN ${USER_SCHEMA}.profiles p ON pa.participants_user_id = p.user_id
+    INNER JOIN ${MAIN_SCHEMA}.room_info r ON pa.room_id = r.room_id
+    WHERE pa.room_id = $1
   `;
+
   try {
     const result = await db.query(query, [roomId]);
     return result.rows;
@@ -197,6 +235,7 @@ roomsModel.getRoomParticipants = async (roomId) => {
     return [];
   }
 };
+
 
 /**
  * 방 참가
@@ -323,6 +362,27 @@ roomsModel.leaveRoom = async (roomId, userId) => {
       message: "모임 나가기 중 문제가 발생했습니다.",
       error: err.message
     };
+  }
+};
+
+/**
+ * 특정 방의 호스트 UUID 조회
+ * 
+ * @param {string} roomId - 방 UUID
+ * @returns {Promise<string|null>} - 호스트의 UUID 또는 null (방이 존재하지 않거나 에러 발생 시)
+ */
+roomsModel.getRoomHost = async (roomId) => {
+  const query = `
+    SELECT room_host FROM ${MAIN_SCHEMA}.room_info
+    WHERE room_id = $1 AND deleted = false
+  `;
+  try {
+    const result = await db.query(query, [roomId]);
+    if (result.rowCount === 0) return null;
+    return result.rows[0].room_host;
+  } catch (err) {
+    console.error("getRoomHost error:", err);
+    return null;
   }
 };
 

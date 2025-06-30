@@ -16,25 +16,24 @@ const roomsModel = require('../models/roomsModel');
  * roomThumbnailImg (방 썸네일 이미지)
  */
 router.post('/', async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user.user_id;
   const body = req.body;
 
-  const isHost = await roomsModel.isHost(userId);
-  const activeCount = await roomsModel.getActiveRoomCount(userId);
-
-  if (isHost || activeCount >= 2) {
-    return res.status(409).json({
-      error: '한 사용자는 하나의 모임만 생성하거나 두 개까지만 참여 가능합니다.',
-    });
-  }
-
+  // roomsModel 내부에서 host 여부 + 활동 중 방 수 체크함
   const result = await roomsModel.createRoom({
     ...body,
-    roomHost: userId,
-    currentParticipants: userId,
+    roomHost: userId
   });
 
-  res.json(result);
+  if (result.error === "모임방을 생성하는데 문제가 발생하였습니다.") {
+    return res.status(500).json({ error: result.error });
+  }
+
+  if (result.error) {
+    return res.status(409).json({ error: result.error });
+  }
+
+  res.status(201).json(result);
 });
 
 // PATCH /rooms/:id 방정보 수정
@@ -61,7 +60,7 @@ router.get('/:id/participants', async (req, res) => {
 // GET /rooms/:id/participants/me 내가 해당 방에 참가 중인지 확인
 router.get('/:id/participants/me', async (req, res) => {
   const roomId = req.params.id;
-  const userId = req.user.id;
+  const userId = req.user.user_id;
 
   try {
     const participants = await roomsModel.getRoomParticipants(roomId);
@@ -76,7 +75,7 @@ router.get('/:id/participants/me', async (req, res) => {
 // POST /rooms/:id/join 방 참가
 router.post('/:id/join', async (req, res) => {
   const roomId = req.params.id;
-  const userId = req.user.id;
+  const userId = req.user.user_id;
 
   const result = await roomsModel.joinRoom(roomId, userId);
   if (result.error) return res.status(409).json(result);
@@ -86,7 +85,7 @@ router.post('/:id/join', async (req, res) => {
 // POST /rooms/:id/leave 방 나가기
 router.post('/:id/leave', async (req, res) => {
   const roomId = req.params.id;
-  const userId = req.user.id;
+  const userId = req.user.user_id;
 
   const result = await roomsModel.leaveRoom(roomId, userId);
   if (result.error) return res.status(409).json(result);
@@ -97,9 +96,46 @@ router.post('/:id/leave', async (req, res) => {
 router.patch('/:id/participants/:userId', async (req, res) => {
   const roomId = req.params.id;
   const targetUserId = req.params.userId;
-  const result = await roomsModel.kickUserFromRoom(roomId, targetUserId);
-  if (result.error) return res.status(409).json(result);
-  res.json(result);
+  const requesterId = req.user.user_id;
+
+  try {
+    const hostId = await roomsModel.getRoomHost(roomId);
+
+    if (!hostId) {
+      return res.status(404).json({ error: '해당 방이 존재하지 않습니다.' });
+    }
+
+    if (hostId !== requesterId) {
+      return res.status(403).json({ error: '방장만 강퇴할 수 있습니다.' });
+    }
+
+    const result = await roomsModel.kickUserFromRoom(roomId, targetUserId);
+    if (result.error) return res.status(409).json(result);
+    res.json(result);
+  } catch (err) {
+    console.error("강퇴 처리 오류:", err);
+    res.status(500).json({ error: '강퇴 처리 중 오류가 발생했습니다.' });
+  }
 });
+
+const db = require("../db/index");
+const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
+
+router.get('/hosted', async (req, res) => {
+  const userId = req.user.user_id;
+  try {
+    const query = `
+      SELECT room_id, room_title, deleted
+      FROM ${MAIN_SCHEMA}.room_info
+      WHERE room_host = $1
+    `;
+    const result = await db.query(query, [userId]);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("GET /rooms/hosted error:", err);
+    res.status(500).json({ message: "호스트 방 조회 실패" });
+  }
+});
+
 
 module.exports = router;
