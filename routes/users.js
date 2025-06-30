@@ -4,7 +4,7 @@ const userModel = require("../models/userModel");
 const emblemAssigner = require("../modules/emblemAssigner");
 const { getDate } = require("../modules/getData");
 
-// GET /api/users/me 현재 로그인한 유저의 프로필 정보 + 엠블럼 조회
+// GET /users/me 현재 로그인한 유저의 프로필 정보 + 엠블럼 조회
 router.get("/me", async (req, res) => {
   try {
     const user = await userModel.getUserById(req.user.user_id);
@@ -29,7 +29,7 @@ router.get("/me", async (req, res) => {
   }
 });
 
-// PUT /api/users/me/nickname 닉네임 변경 (한번 변경후 30일 제한)
+// PUT /users/me/nickname 닉네임 변경 (한번 변경후 30일 제한)
 router.put("/me/nickname", async (req, res) => {
   const userId = req.user.user_id;
   const newNickname = req.body.nickname;
@@ -52,7 +52,7 @@ router.put("/me/nickname", async (req, res) => {
   res.json({ message: "닉네임이 성공적으로 변경되었습니다.", nickname: updated.user_nickname });
 });
 
-// PUT /api/users/me/user_bio 한줄 소개 변경
+// PUT /users/me/user_bio 한줄 소개 변경
 router.put("/me/user_bio", async (req, res) => {
   const user = await userModel.getUserById(req.user.user_id);
   if (!user) return res.status(404).json({ message: "계정을 찾을 수 없습니다." });
@@ -61,7 +61,7 @@ router.put("/me/user_bio", async (req, res) => {
   res.json({ message: "한줄 소개가 업데이트 되었습니다." });
 });
 
-// POST /api/users/me/location 위치 정보 변경
+// POST /users/me/location 위치 정보 변경
 router.post("/me/location", async (req, res) => {
   const user = await userModel.getUserById(req.user.user_id);
   if (!user) return res.status(404).json({ message: "계정을 찾을 수 없습니다." });
@@ -70,13 +70,26 @@ router.post("/me/location", async (req, res) => {
   res.json({ message: "위치가 업데이트 되었습니다." });
 });
 
-// PATCH /api/users/me/delete 회원 탈퇴 처리 (soft delete)
+// PATCH /users/me/delete 회원 탈퇴 처리 (soft delete)
 router.patch("/me/delete", async (req, res) => {
   const user = await userModel.getUserById(req.user.user_id);
   if (!user) return res.status(404).json({ message: "계정을 찾을 수 없습니다." });
 
   await userModel.softDelete(req.user.user_id, req.body.deleted);
   res.json({ message: "계정이 탈퇴 처리 되었습니다." });
+});
+
+// GET /users/me/rooms
+router.get('/me/rooms', async (req, res) => {
+  const userId = req.user.user_id;
+
+  try {
+    const result = await userModel.getMyActiveRooms(userId);
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("GET /users/me/rooms error:", err);
+    res.status(500).json({ error: "참여 중인 방 조회에 실패했습니다." });
+  }
 });
 
 module.exports = router;

@@ -7,21 +7,41 @@ const USER_SCHEMA = process.env.DB_USER_SCHEMA;
 const userModel = {};
 
 /**
- * 유저 ID로 프로필 + 엠블럼 정보 조회
+ * 유저 ID로 프로필 + 엠블럼 정보 + 참여 중인 방 수 조회
  * @param {string} userId - 사용자 UUID
- * @returns {Object} 사용자 정보 + 엠블럼 정보 (LEFT JOIN)
+ * @returns {Object|null} 사용자 정보 + 엠블럼 정보 + join_state
  */
-userModel.getUserById = async(userId) => {
-  const query = `
+userModel.getUserById = async (userId) => {
+  const profileQuery = `
     SELECT p.*, e.emblem_name, e.emblem_description
     FROM ${USER_SCHEMA}.profiles p
     LEFT JOIN ${MAIN_SCHEMA}.emblems e ON p.emblem_id = e.emblem_id
     WHERE p.user_id = $1 AND p.deleted = false
   `;
 
-  const result = await db.query(query, [userId]);
-  return result.rows[0];
+  const profileResult = await db.query(profileQuery, [userId]);
+  const user = profileResult.rows[0];
+  if (!user) return null;
+
+  // 내가 호스트이거나 참가자인 모든 활성화 방 room_id 중복 없이 조회
+  const activeRoomQuery = `
+    SELECT COUNT(DISTINCT r.room_id) AS count
+    FROM ${MAIN_SCHEMA}.room_info r
+    LEFT JOIN ${MAIN_SCHEMA}.participants p ON r.room_id = p.room_id
+    WHERE r.deleted = false
+      AND (r.room_host = $1 OR p.participants_user_id = $1)
+  `;
+
+  const roomResult = await db.query(activeRoomQuery, [userId]);
+  const join_state = parseInt(roomResult.rows[0].count);
+
+  return {
+    ...user,
+    join_state,
+  };
 };
+
+
 
 /**
  * 닉네임 변경 가능 여부 확인용 (최근 변경일자 확인)
@@ -102,6 +122,37 @@ userModel.softDelete = async(userId, deleted) => {
   `;
 
   return db.query(query, [deleted, now, userId]);
+};
+
+/**
+ * 현재 사용자가 호스트이거나 참가 중인 모든 방을 조회한다.
+ *
+ * @param {string} userId - 현재 로그인한 사용자의 UUID
+ * @returns {Promise<Array>} - 사용자가 참여 중인 방 목록
+ *  각 방 객체는 다음 정보를 포함:
+ *    - room_id: 방 UUID
+ *    - room_title: 방 제목
+ *    - room_scheduled: 예정된 날짜
+ *    - deleted: 삭제 여부
+ *    - is_host: 해당 방의 호스트 여부
+ */
+userModel.getMyActiveRooms = async (userId) => {
+  const query = `
+    SELECT r.room_id, r.room_title, r.room_scheduled, r.deleted, (r.room_host = $1) AS is_host
+    FROM ${MAIN_SCHEMA}.room_info r
+    LEFT JOIN ${MAIN_SCHEMA}.participants p ON r.room_id = p.room_id
+    WHERE (r.room_host = $1 OR p.participants_user_id = $1) AND r.deleted = false
+    GROUP BY r.room_id
+    ORDER BY r.room_scheduled DESC
+  `;
+
+  try {
+    const result = await db.query(query, [userId]);
+    return result.rows;
+  } catch (err) {
+    console.error("getMyActiveRooms error:", err);
+    return [];
+  }
 };
 
 module.exports = userModel;
