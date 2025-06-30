@@ -134,12 +134,13 @@ userModel.softDelete = async(userId, deleted) => {
  *    - room_id: 방 UUID
  *    - room_title: 방 제목
  *    - room_scheduled: 예정된 날짜
+ *    - room_thumbnail_img: base64 이미지 문자열
  *    - deleted: 삭제 여부
  *    - is_host: 해당 방의 호스트 여부
  */
 userModel.getMyActiveRooms = async (userId) => {
   const query = `
-    SELECT r.room_id, r.room_title, r.room_scheduled, r.deleted, (r.room_host = $1) AS is_host
+    SELECT r.room_id, r.room_title, r.room_scheduled, r.room_thumbnail_img, r.deleted, (r.room_host = $1) AS is_host
     FROM ${MAIN_SCHEMA}.room_info r
     LEFT JOIN ${MAIN_SCHEMA}.participants p ON r.room_id = p.room_id
     WHERE (r.room_host = $1 OR p.participants_user_id = $1) AND r.deleted = false
