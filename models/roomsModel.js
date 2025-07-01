@@ -86,10 +86,9 @@ roomsModel.createRoom = async (params) => {
       return { error: "방 생성에 필요한 호스트 정보가 누락되었습니다." };
     }
 
-    // roomEndedAt 자동 계산: roomScheduled 당일 23:59:00으로 설정
-    const scheduledDate = new Date(params.roomScheduled);
-    scheduledDate.setHours(23, 59, 0, 0);
-    const roomEndedAt = scheduledDate.toISOString();
+    const scheduledDate = new Date(params.roomScheduled); // string → Date 객체
+    scheduledDate.setHours(23, 59, 0, 0); // 로컬 기준으로 시간 설정
+    const roomEndedAt = new Date(scheduledDate.getTime() - scheduledDate.getTimezoneOffset() * 60000).toISOString();
 
     // 현재 호스트인지 확인
     const isHost = await roomsModel.isHost(params.roomHost);
@@ -260,14 +259,10 @@ roomsModel.joinRoom = async (roomId, userId) => {
       };
     }
 
-    // 이미 참가 중인 방 개수 확인
-    const joinedCountQuery = `
-      SELECT COUNT(*) FROM ${MAIN_SCHEMA}.participants 
-      WHERE participants_user_id = $1
-    `;
-    const countRes = await db.query(joinedCountQuery, [userId]);
-    if (parseInt(countRes.rows[0].count, 10) >= 2) {
-      return { error: "이미 두 개의 모임에 참여 중입니다." };
+    // 2. 진행 중인 방 개수 확인 (host 또는 participant로)
+    const activeRooms = await userModel.getMyActiveRooms(userId);
+    if (activeRooms.length >= 2) {
+      return { error: "이미 두 개의 진행 중인 모임에 참여 중입니다." };
     }
 
     // 중복 참가 확인
