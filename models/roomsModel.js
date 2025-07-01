@@ -283,7 +283,7 @@ roomsModel.joinRoom = async (roomId, userId) => {
     const currentCountRes = await db.query(currentCountQuery, [roomId]);
     const currentParticipants = parseInt(currentCountRes.rows[0].count, 10);
     if (currentParticipants >= 4) {
-      return { error: "이 방은 이미 정원(4명)이 가득 찼습니다." };
+      return { error: "이 방은 이미 정원이 가득 찼습니다." };
     }
 
     // 참가 처리

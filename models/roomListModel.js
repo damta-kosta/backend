@@ -13,8 +13,8 @@ const roomListModel = {};
  * @param {number} limit - 불러올 개수
  */
 roomListModel.getRoomList = async ({ sort, cursor, limit }) => {
-  const sortField = sort === "popular" ? "room_scheduled" : "room_created_at";
-  const orderField = sort === "popular" ? "current_participants" : "room_created_at";
+  const sortField = sort === "popular" ? "current_participants" : "room_scheduled";
+  const orderField = sortField;
 
   const whereClause = cursor
     ? `WHERE r.deleted = FALSE AND r.${sortField} < $1`
