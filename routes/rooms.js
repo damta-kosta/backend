@@ -3,7 +3,7 @@ var router = express.Router();
 const roomsModel = require('../models/roomsModel');
 
 // rooms router
-// POST /rooms/
+// POST /rooms
 /**
  * need info
  * 방 생성 모듈
@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
   res.status(201).json(result);
 });
 
-// PATCH /rooms/:id 방정보 수정
+// PATCH /rooms/:id/modify 방정보 수정
 router.patch('/:id/modify', async (req, res) => {
   const roomId = req.params.id;
   const result = await roomsModel.updateRoomInfo(roomId, req.body);
@@ -83,7 +83,7 @@ router.post('/:id/joinRoom', async (req, res) => {
   console.log(roomId, userId);
 });
 
-// POST /:id/leaveRoom 방 나가기
+// POST /rooms/:id/leaveRoom 방 나가기
 router.post('/:id/leaveRoom', async (req, res) => {
   const roomId = req.params.id;
   const userId = req.user.user_id;
