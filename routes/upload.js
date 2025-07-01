@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const model = require('../models/uploadModel');
 
-// POST /api/upload
+// POST /upload
 router.post('/', async (req, res) => {
   const body = req.body;
 

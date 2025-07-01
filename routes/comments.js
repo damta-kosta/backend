@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const commentModel = require("../models/commentModel");
 
-// POST /:communityId/write 댓글 작성
+// POST /comments/:communityId/write 댓글 작성
 router.post("/:communityId/write", async (req, res) => {
   try {
     const { commentBody } = req.body;
@@ -17,7 +17,7 @@ router.post("/:communityId/write", async (req, res) => {
   }
 });
 
-// POST /reply/:commentId 답글 작성
+// POST /comments/reply/:commentId 답글 작성
 router.post("/reply/:commentId", async (req, res) => {
   try {
     const communityId = req.params.communityId;
@@ -33,7 +33,7 @@ router.post("/reply/:commentId", async (req, res) => {
   }
 });
 
-// GET /:communityId/comments 댓글 목록 조회 (커서 기반 무한 스크롤)
+// GET /comments/:communityId/comments 댓글 목록 조회 (커서 기반 무한 스크롤)
 router.get("/:communityId/comments", async (req, res) => {
   try {
     const communityId = req.params.communityId;
@@ -52,7 +52,7 @@ router.get("/:communityId/comments", async (req, res) => {
   }
 });
 
-// PATCH /comment/:commentId/delete 댓글 삭제
+// PATCH /comments/comment/:commentId/delete 댓글 삭제
 router.patch("/comment/:commentId/delete", async (req, res) => {
   try {
     const commentId = req.params.commentId;
@@ -67,7 +67,7 @@ router.patch("/comment/:commentId/delete", async (req, res) => {
   }
 });
 
-// PATCH /reply/:replyId/delete 답글 삭제
+// PATCH /comments/reply/:replyId/delete 답글 삭제
 router.patch("/reply/:replyId/delete", async (req, res) =>{
   try {
     const replyId = req.params.replyId;

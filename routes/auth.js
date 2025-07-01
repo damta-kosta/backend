@@ -8,13 +8,13 @@ const emblemAssigner = require("../modules/emblemAssigner");
 
 require("dotenv").config();
 
-// 카카오 로그인 URL로 리디렉션
+// GET /auth/kakao/login 카카오 로그인 URL로 리디렉션
 router.get("/kakao/login", (req, res) => {
   const kakaoAuthURL = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${process.env.KAKAO_CLIENT_ID}&redirect_uri=${process.env.KAKAO_REDIRECT_URI}`;
   res.redirect(kakaoAuthURL);
 });
 
-// 콜백에서 사용자 인증, DB 조회, 신규 가입, JWT 발급
+// GET /auth/kakao/callback?code= 콜백에서 사용자 인증, DB 조회, 신규 가입, JWT 발급
 router.get("/kakao/callback", async (req, res) => {
   const code = req.query.code;
 

@@ -3,7 +3,7 @@ const router = express.Router();
 const { v4: uuidv4 } = require("uuid");
 const emblemModel = require("../models/emblemModel");
 
-// POST /emblem/assign 엠블럼 등록 (서버가 UUID 생성)
+// POST /emblems/assign 엠블럼 등록 (서버가 UUID 생성)
 router.post("/assign", async (req, res) => {
   const { emblem_name, emblem_description } = req.body;
 

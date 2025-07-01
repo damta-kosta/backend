@@ -24,7 +24,7 @@ router.post("/write", async (req, res) => {
   }
 })
 
-// GET /api/community 최신순으로 게시글을 일정 개수만큼 조회 (cursor 기반)
+// GET /community 최신순으로 게시글을 일정 개수만큼 조회 (cursor 기반)
 router.get("/", async (req, res) => {
   try {
     const cursor = req.query.cursor || null;
@@ -47,7 +47,7 @@ if (hasNext && posts.length > 1) {
 });
 
 
-// PATCH /api/community/:id/delete  게시글 삭제(soft delete)
+// PATCH /community/:id/delete  게시글 삭제(soft delete)
 router.patch("/:id/delete", async (req, res) => {
   try {
     const communityId = req.params.id;
