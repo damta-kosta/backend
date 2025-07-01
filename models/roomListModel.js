@@ -34,15 +34,8 @@ roomListModel.getRoomList = async ({ sort, cursor, limit }) => {
   }
 
   const query = `
-    SELECT 
-      r.room_id,
-      r.room_title,
-      r.room_description,
-      r.room_scheduled,
-      r.room_created_at,
-      r.room_thumbnail_img,
-      r.max_participants,
-      p.user_nickname AS host_nickname,
+    SELECT r.room_id, r.room_title, r.room_description, r.room_scheduled,
+      r.room_created_at, r.room_thumbnail_img, r.max_participants, p.user_nickname AS host_nickname,
       json_agg(
         DISTINCT jsonb_build_object(
           'user_id', pr.participants_user_id,
@@ -52,8 +45,7 @@ roomListModel.getRoomList = async ({ sort, cursor, limit }) => {
     FROM ${MAIN_SCHEMA}.room_info r
     JOIN ${USER_SCHEMA}.profiles p ON r.room_host = p.user_id
     LEFT JOIN ${MAIN_SCHEMA}.participants pr ON r.room_id = pr.room_id
-    LEFT JOIN ${USER_SCHEMA}.profiles pp ON pr.participants_user_id = pp.user_id
-    ${whereClause}
+    LEFT JOIN ${USER_SCHEMA}.profiles pp ON pr.participants_user_id = pp.user_id ${whereClause}
     GROUP BY r.room_id, p.user_nickname
     ORDER BY r.${sortField} DESC
     LIMIT $${values.length + 1}
