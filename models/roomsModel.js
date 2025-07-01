@@ -1,6 +1,7 @@
 const db = require("../db/index");
 const { v4: uuidv4 } = require("uuid");
 const { getDate } = require("../modules/getData");
+const userModel = require("../models/userModel");
 require("dotenv").config();
 
 const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
@@ -235,7 +236,6 @@ roomsModel.getRoomParticipants = async (roomId) => {
   }
 };
 
-
 /**
  * 방 참가
  * @param {string} roomId - 참가할 방 UUID
@@ -289,10 +289,10 @@ roomsModel.joinRoom = async (roomId, userId) => {
     // 참가 처리
     const insertQuery = `
       INSERT INTO ${MAIN_SCHEMA}.participants (
-        participants_id, room_id, participants_user_id, attended_at
-      ) VALUES ($1, $2, $3, $4)
+        participants_id, room_id, participants_user_id
+      ) VALUES ($1, $2, $3)
     `;
-    await db.query(insertQuery, [uuidv4(), roomId, userId, now]);
+    await db.query(insertQuery, [uuidv4(), roomId, userId]);
 
     return {
       message: "모임에 참가했습니다.",
@@ -303,7 +303,6 @@ roomsModel.joinRoom = async (roomId, userId) => {
     return { message: "참가 중 문제가 발생했습니다." };
   }
 };
-
 
 /**
  * 방 나가기

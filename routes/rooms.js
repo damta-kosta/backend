@@ -37,7 +37,7 @@ router.post('/', async (req, res) => {
 });
 
 // PATCH /rooms/:id 방정보 수정
-router.patch('/:id', async (req, res) => {
+router.patch('/:id/modify', async (req, res) => {
   const roomId = req.params.id;
   const result = await roomsModel.updateRoomInfo(roomId, req.body);
   res.json(result);
@@ -73,17 +73,18 @@ router.get('/:id/participants/me', async (req, res) => {
 });
 
 // POST /rooms/:id/join 방 참가
-router.post('/:id/join', async (req, res) => {
+router.post('/:id/joinRoom', async (req, res) => {
   const roomId = req.params.id;
   const userId = req.user.user_id;
 
   const result = await roomsModel.joinRoom(roomId, userId);
   if (result.error) return res.status(409).json(result);
   res.json(result);
+  console.log(roomId, userId);
 });
 
-// POST /rooms/:id/leave 방 나가기
-router.post('/:id/leave', async (req, res) => {
+// POST /:id/leaveRoom 방 나가기
+router.post('/:id/leaveRoom', async (req, res) => {
   const roomId = req.params.id;
   const userId = req.user.user_id;
 
@@ -136,6 +137,5 @@ router.get('/hosted', async (req, res) => {
     res.status(500).json({ message: "호스트 방 조회 실패" });
   }
 });
-
 
 module.exports = router;
