@@ -143,7 +143,7 @@ userModel.getMyActiveRooms = async (userId) => {
     SELECT r.room_id, r.room_title, r.room_scheduled, r.room_thumbnail_img, r.deleted, (r.room_host = $1) AS is_host
     FROM ${MAIN_SCHEMA}.room_info r
     LEFT JOIN ${MAIN_SCHEMA}.participants p ON r.room_id = p.room_id
-    WHERE (r.room_host = $1 OR p.participants_user_id = $1) AND r.deleted = false
+    WHERE (r.room_host = $1 OR p.participants_user_id = $1) AND r.deleted = false AND r.room_ended_at > NOW()
     GROUP BY r.room_id
     ORDER BY r.room_scheduled DESC
   `;
@@ -152,7 +152,7 @@ userModel.getMyActiveRooms = async (userId) => {
     const result = await db.query(query, [userId]);
     return result.rows;
   } catch (err) {
-    console.error("getMyActiveRooms error:", err);
+    console.error("참가 중인 방 오류:", err);
     return [];
   }
 };

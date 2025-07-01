@@ -87,7 +87,7 @@ router.get('/me/rooms', async (req, res) => {
     const result = await userModel.getMyActiveRooms(userId);
     res.status(200).json(result);
   } catch (err) {
-    console.error("GET /users/me/rooms error:", err);
+    console.error("참여 중인 방 조회 실패:", err);
     res.status(500).json({ error: "참여 중인 방 조회에 실패했습니다." });
   }
 });
