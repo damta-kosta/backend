@@ -72,7 +72,7 @@ router.get('/:id/participants/me', async (req, res) => {
   }
 });
 
-// POST /rooms/:id/join 방 참가
+// POST /rooms/:id/joinRoom 방 참가
 router.post('/:id/joinRoom', async (req, res) => {
   const roomId = req.params.id;
   const userId = req.user.user_id;
