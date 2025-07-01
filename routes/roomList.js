@@ -28,7 +28,8 @@ router.get("/rooms", async (req, res) => {
 
     const parsedLimit = Math.min(parseInt(limit, 10) || 10, 50);
 
-    const result = await roomListModel.getRoomList({
+    // cursor는 단순 ISO 문자열로 전달됨 (ex. 2025-07-01T08:16:54.000Z)
+    const result = await roomListModel.getLatestRooms({
       sort,
       cursor,
       limit: parsedLimit
@@ -41,6 +42,7 @@ router.get("/rooms", async (req, res) => {
         title: room.title,
         description: room.description,
         room_scheduled: room.room_scheduled,
+        created_at: room.created_at,
         thumbnailBase64: base64Img,
         current_participants: room.current_participants,
         max_participants: room.max_participants,
