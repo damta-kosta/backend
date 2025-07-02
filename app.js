@@ -15,6 +15,7 @@ var communityRouter = require("./routes/community");
 var commentsRouter = require("./routes/comments");
 var emblemsRouter = require("./routes/emblems");
 var roomListRouter = require("./routes/roomList");
+var chatRouter = require("./routes/chat");
 // import router
 
 const jwtMiddleware = require("./middlewares/jwtMiddleware");
@@ -43,6 +44,7 @@ app.use("/community", jwtMiddleware, communityRouter);
 app.use("/comments", jwtMiddleware, commentsRouter);
 app.use("/emblems", emblemsRouter);
 app.use("/roomList", roomListRouter);
+app.use("/chat", jwtMiddleware, chatRouter);
 //custom router
 
 app.use(function(req, res, next) {
