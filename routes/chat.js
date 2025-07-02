@@ -141,7 +141,7 @@ router.get("/:roomId/allChat", async (req, res) => {
 
     const chatList = await chatModel.getAllChatByRoom(roomId);
 
-    return res.status(200).json({ chat: chatList });
+    return res.status(200).json({ room_id: roomId, chat: chatList });
   } catch(err) {
     console.error("전체 채팅 조회 오류: ", err);
     return res.status(500).json({ error: "전체 채팅 조회 실패" });
