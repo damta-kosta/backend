@@ -38,7 +38,7 @@ router.get("/:communityId/comments", async (req, res) => {
   try {
     const communityId = req.params.communityId;
     const cursor = req.query.cursor || null;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 20;
 
     const comments = await commentModel.getComments(communityId, cursor, limit);
     const hasNext = comments.length === limit;

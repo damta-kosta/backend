@@ -8,10 +8,10 @@ router.get("/rooms", async (req, res) => {
     const {
       sort = "latest",
       cursor = null,
-      limit = 10
+      limit = 20
     } = req.query;
 
-    const parsedLimit = Math.min(parseInt(limit, 10) || 10, 50);
+    const parsedLimit = Math.min(parseInt(limit, 10) || 20, 50);
 
     // 정렬 옵션 유효성 검증
     if (!["latest", "scheduled"].includes(sort)) {

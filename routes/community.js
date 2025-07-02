@@ -28,7 +28,7 @@ router.post("/write", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const cursor = req.query.cursor || null;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 20;
 
     const posts = await communityModel.getPosts(cursor, limit);
     const hasNext = posts.length === limit;
