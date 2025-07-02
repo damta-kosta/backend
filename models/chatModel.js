@@ -1,56 +1,238 @@
 const db = require('../db');
 const { v4: uuidv4 } = require('uuid');
+const { getDate } = require("../modules/getData");
+
+const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
+const USER_SCHEMA = process.env.DB_USER_SCHEMA;
 
 const chatModel = {};
 
 /**
- * 채팅 메시지를 DB에 저장합니다.
- * @param {string} roomId - 채팅이 속한 방 ID
- * @param {string} userId - 메시지를 보낸 사용자 ID
- * @param {string} chatMsg - 전송할 채팅 메시지
- * @returns {Promise<object>} 저장된 채팅 메시지 객체
+ * 방 정보 조회
+ * @param {string} roomId 
+ * @returns {Promise<object|null>}
+ */
+chatModel.getRoomInfo = async (roomId) => {
+  const query = `
+    SELECT room_host, room_scheduled, room_ended_at, attendance_checked_at
+    FROM ${MAIN_SCHEMA}.room_info
+    WHERE room_id = $1;
+  `;
+  const { rows } = await db.query(query, [roomId]);
+  return rows[0] || null;
+};
+
+/**
+ * 방의 모든 인원이 출석 완료했는지 확인
+ * @param {string} roomId 
+ * @returns {Promise<boolean>}
+ */
+chatModel.hasAllAttended = async (roomId) => {
+  const query = `
+    SELECT COUNT(*) AS not_attended
+    FROM ${MAIN_SCHEMA}.participants
+    WHERE room_id = $1 AND attended_at IS DISTINCT FROM true;
+  `;
+  const { rows } = await db.query(query, [roomId]);
+  return parseInt(rows[0].not_attended) === 0;
+};
+
+/**
+ * 출석 체크 완료 시간 기록
+ */
+chatModel.setAttendanceCheckedAt = async (roomId) => {
+  const now = getDate(0);
+
+  const query = `
+    UPDATE ${MAIN_SCHEMA}.room_info
+    SET attendance_checked_at = $2
+    WHERE room_id = $1;
+  `;
+
+  await db.query(query, [roomId, now]);
+};
+
+/**
+ * 특정 유저가 출석했는지 확인
+ * @param {string} roomId 
+ * @param {string} userId 
+ * @returns {Promise<boolean>}
+ */
+chatModel.isUserAttended = async (roomId, userId) => {
+  const query = `
+    SELECT attended_at
+    FROM ${MAIN_SCHEMA}.participants
+    WHERE room_id = $1 AND participants_user_id = $2;
+  `;
+  const { rows } = await db.query(query, [roomId, userId]);
+  return rows[0]?.attended_at === true;
+};
+
+/**
+ * 현재 시간이 room_ended_at 이전인지 확인
+ * @param {string} roomId 
+ * @returns {Promise<boolean>}
+ */
+chatModel.isReputationAllowed = async (roomId) => {
+  const query = `
+    SELECT room_ended_at
+    FROM ${MAIN_SCHEMA}.room_info
+    WHERE room_id = $1;
+  `;
+  const { rows } = await db.query(query, [roomId]);
+  if (!rows.length || !rows[0].room_ended_at) return false;
+  return new Date() <= new Date(rows[0].room_ended_at);
+};
+
+/**
+ * 채팅 메시지 저장
+ * @param {string} roomId 
+ * @param {string} userId 
+ * @param {string} chatMsg 
+ * @returns {Promise<object>}
  */
 chatModel.insertChat = async (roomId, userId, chatMsg) => {
-
+  const chatId = uuidv4();
+  const createdAt = getDate(0);
+  const query = `
+    INSERT INTO ${MAIN_SCHEMA}.chat (chat_id, room_id, user_id, chat_msg, created_at)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING chat_id, room_id, user_id, chat_msg, created_at;
+  `;
+  const values = [chatId, roomId, userId, chatMsg, createdAt];
+  const { rows } = await db.query(query, values);
+  return rows[0];
 };
 
 /**
- * 방장이 특정 유저의 출석을 수동으로 체크합니다.
- * @param {string} roomId - 방 ID
- * @param {string} userId - 출석할 사용자 ID
- * @returns {Promise<object|null>} 출석 완료된 참가자 레코드, 실패 시 null
+ * 방장 수동 출석 체크
+ * @param {string} roomId 
+ * @param {string} targetUserId 
+ * @param {string} requestUserId 
+ * @returns {Promise<object|{error: string, status: number}>}
  */
-chatModel.markAttendance = async (roomId, userId) => {
+chatModel.markAttendance = async (roomId, targetUserId, requestUserId) => {
+  const room = await chatModel.getRoomInfo(roomId);
+  if (!room) return { error: "해당 방이 존재하지 않습니다.", status: 404 };
 
+  if (room.room_host !== requestUserId) {
+    return { error: "방장이 아닙니다.", status: 403 };
+  }
+
+  const now = new Date();
+  if (now >= new Date(room.room_scheduled)) {
+    return { error: "모임 시간이 이미 지났습니다. 출석 체크 불가.", status: 403 };
+  }
+
+  const query = `
+    UPDATE ${MAIN_SCHEMA}.participants
+    SET attended_at = true
+    WHERE room_id = $1 AND participants_user_id = $2
+    RETURNING *;
+  `;
+
+  const { rows } = await db.query(query, [roomId, targetUserId]);
+
+  const allDone = await db.query(query, [roomId, targetUserId]);
+  if(allDone) await chatModel.setAttendanceCheckedAt(roomId);
+
+  return rows[0] || null;
 };
 
 /**
- * 사용자가 이미 출석하지 않은 경우 자동으로 출석을 처리합니다.
- * @param {string} roomId - 방 ID
- * @param {string} userId - 사용자 ID
- * @returns {Promise<object|null>} 출석 완료된 레코드, 이미 출석 시 null
+ * 자동 출석 체크 및 cold 평판 부여
+ * @param {string} roomId 
+ * @returns {Promise<{updated: number, autoColds: number}>}
  */
-chatModel.autoAttendance = async (roomId, userId) => {
+chatModel.autoAttendance = async (roomId) => {
+  const query = `
+    UPDATE ${MAIN_SCHEMA}.participants
+    SET attended_at = false
+    WHERE room_id = $1 AND attended_at IS NULL
+    RETURNING participants_user_id;
+  `;
+  const { rows } = await db.query(query, [roomId]);
+  const affectedUserIds = rows.map(row => row.participants_user_id);
 
+  for (const userId of affectedUserIds) {
+    await chatModel.updateReputation(userId, "cold");
+  }
+
+  return {
+    updated: affectedUserIds.length,
+    autoColds: affectedUserIds.length
+  };
 };
 
 /**
- * 해당 방의 채팅을 종료하며, 종료 시각을 23:59로 설정합니다.
- * @param {string} roomId - 종료할 방의 ID
- * @returns {Promise<object>} 업데이트된 room_ended_at 시간
+ * 방 조기 종료 처리
+ * @param {string} roomId 
+ * @returns {Promise<object>}
  */
 chatModel.endChatRoom = async (roomId) => {
-
+  const now = getDate(0);
+  const query = `
+    UPDATE ${MAIN_SCHEMA}.room_info
+    SET room_ended_at = $2
+    WHERE room_id = $1
+    RETURNING room_ended_at;
+  `;
+  const { rows } = await db.query(query, [roomId, now]);
+  return rows[0];
 };
 
 /**
- * 모임 종료 후 유저의 평판을 업데이트합니다.
- * @param {string} userId - 평가 받을 유저의 ID
- * @param {"warm"|"cold"} reputation - 평판 종류 ("warm" 또는 "cold")
- * @returns {Promise<object>} 업데이트된 like_temp
+ * 평판 적용 (warm 또는 cold)
+ * @param {string} userId 
+ * @param {"warm"|"cold"} reputation 
+ * @returns {Promise<object>}
  */
 chatModel.updateReputation = async (userId, reputation) => {
-
+  const delta = reputation === "warm" ? 0.3 : -0.3;
+  const query = `
+    UPDATE ${USER_SCHEMA}.profiles
+    SET like_temp = GREATEST(0, LEAST(100, like_temp + $1))
+    WHERE user_id = $2
+    RETURNING like_temp;
+  `;
+  const { rows } = await db.query(query, [delta, userId]);
+  return rows[0];
 };
+
+/**
+ * 특정 방에 참여한 참가자들의 목록을 조회합니다.
+ * @param {string} roomId - 방 ID
+ * @returns {Promise<Array<object>>} 참가자 정보 배열
+ */
+chatModel.getParticipantsByRoom = async (roomId) => {
+  const query = `
+    SELECT p.participants_user_id AS user_id, u.user_nickname, u.user_profile_img, p.attended_at
+    FROM ${MAIN_SCHEMA}.participants p
+    JOIN ${USER_SCHEMA}.profiles u ON p.participants_user_id = u.user_id
+    WHERE p.room_id = $1
+    ORDER BY u.user_nickname;
+  `;
+  const { rows } = await db.query(query, [roomId]);
+  return rows;
+};
+
+/**
+ * 특정 방의 전체 채팅 메시지를 조회합니다.
+ * @param {string} roomId 
+ * @returns {Promise<Array<object>>}
+ */
+chatModel.getAllChatByRoom = async (roomId) => {
+  const query = `
+    SELECT c.chat_id, c.room_id, c.user_id, c.chat_msg, c.created_at, u.user_nickname, u.user_profile_img
+    FROM ${MAIN_SCHEMA}.chat c
+    JOIN ${USER_SCHEMA}.profiles u ON c.user_id = u.user_id
+    WHERE c.room_id = $1
+    ORDER BY c.created_at ASC;
+  `;
+
+  const { rows } = await db.query(query, [roomId]);
+  return rows;
+};
+
 
 module.exports = chatModel;
