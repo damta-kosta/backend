@@ -94,11 +94,20 @@ chatModel.isReputationAllowed = async (roomId) => {
 chatModel.insertChat = async (roomId, userId, chatMsg) => {
   const chatId = uuidv4();
   const createdAt = getDate(0);
+
   const query = `
-    INSERT INTO ${MAIN_SCHEMA}.chat (chat_id, room_id, user_id, chat_msg, created_at)
-    VALUES ($1, $2, $3, $4, $5)
-    RETURNING chat_id, room_id, user_id, chat_msg, created_at;
+    WITH inserted AS (
+      INSERT INTO ${MAIN_SCHEMA}.chat (chat_id, room_id, user_id, chat_msg, created_at)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING chat_id, room_id, user_id, chat_msg, created_at
+    )
+    SELECT 
+      i.chat_id, i.room_id, i.user_id, i.chat_msg, i.created_at,
+      p.user_nickname, p.user_profile_img
+    FROM inserted i
+    JOIN ${USER_SCHEMA}.profiles p ON i.user_id = p.user_id;
   `;
+
   const values = [chatId, roomId, userId, chatMsg, createdAt];
   const { rows } = await db.query(query, values);
   return rows[0];
@@ -214,6 +223,23 @@ chatModel.getParticipantsByRoom = async (roomId) => {
   `;
   const { rows } = await db.query(query, [roomId]);
   return rows;
+};
+
+/**
+ * 사용자가 특정 방의 참가자인지 확인
+ * @param {string} roomId 
+ * @param {string} userId 
+ * @returns {Promise<boolean>}
+ */
+chatModel.isUserParticipant = async (roomId, userId) => {
+  const query = `
+    SELECT 1 FROM ${MAIN_SCHEMA}.participants
+    WHERE room_id = $1 AND participants_user_id = $2
+    LIMIT 1;
+  `;
+  
+  const { rows } = await db.query(query, [roomId, userId]);
+  return rows.length > 0;
 };
 
 /**

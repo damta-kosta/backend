@@ -3,8 +3,8 @@ const router = express.Router();
 const chatModel = require("../models/chatModel");
 
 
-// POST /chat/:roomId/chat 채팅 메시지 전송 (Socket.IO)
-router.post("/:roomId/chat", async (req, res) => {
+// POST /chat/:roomId/chats 채팅 메시지 전송 (Socket.IO)
+router.post("/:roomId/chats", async (req, res) => {
   try {
     const { roomId } = req.params;
     const { chatMsg } = req.body;
@@ -134,13 +134,24 @@ router.post("/:userId/reputation", async (req, res) => {
 router.get("/:roomId/allChat", async (req, res) => {
   try {
     const { roomId } = req.params;
+    const userId = req.user?.user_id;
 
     if(!roomId) {
       return res.status(400).json({ error: "roomId가 필요합니다." });
     }
 
-    const chatList = await chatModel.getAllChatByRoom(roomId);
+    if(!userId) {
+      return res.status(400).json({ error: "사용자 정보가 필요합니다." });
+    }
 
+    // 참가 여부 확인
+    const isParticipant = await chatModel.isUserParticipant(roomId, userId);
+
+    if(!isParticipant) {
+      return res.status(403).json({ error: "해당 방의 참가자가 아닙니다."});
+    }
+
+    const chatList = await chatModel.getAllChatByRoom(roomId);
     return res.status(200).json({ room_id: roomId, chat: chatList });
   } catch(err) {
     console.error("전체 채팅 조회 오류: ", err);
