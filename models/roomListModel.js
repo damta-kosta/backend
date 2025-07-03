@@ -8,6 +8,24 @@ const USER_SCHEMA = process.env.DB_USER_SCHEMA;
 const roomListModel = {};
 
 /**
+ * 썸네일 이미지 경로를 base64로 변환
+ * 
+ * @param {string} filePath 
+ * @returns {Promise<string|null>}
+ */
+roomListModel.encodeImageToBase64 = async (filePath) => {
+  try {
+    if (!filePath || filePath === "-") return null;
+    const imageBuffer = await fs.readFile(filePath);
+    const ext = path.extname(filePath).substring(1);
+    return `data:image/${ext};base64,${imageBuffer.toString("base64")}`;
+  } catch (err) {
+    console.error("이미지 변환 오류:", err);
+    return null;
+  }
+};
+
+/**
  * 방 리스트 조회 (커서 기반 페이지네이션 - latest | scheduled 지원)
  * 
  * @param {string} sort - 'latest' | 'scheduled'
@@ -15,13 +33,15 @@ const roomListModel = {};
  * @param {number} limit - 불러올 개수
  */
 roomListModel.getRoomList = async ({ sort, cursor, limit }) => {
-  let sortField;
+  let sortField, sortOrder;
   if (sort === "latest") {
     sortField = "room_created_at";
+    sortOrder = "DESC";
   } else if (sort === "scheduled") {
     sortField = "room_scheduled";
+    sortOrder = "ASC";
   } else {
-    throw new Error("Invalid sort option");
+    throw new Error("유효하지않은 sort option 입니다.");
   }
 
   let whereClause = `WHERE r.deleted = FALSE`;
@@ -47,7 +67,7 @@ roomListModel.getRoomList = async ({ sort, cursor, limit }) => {
     LEFT JOIN ${MAIN_SCHEMA}.participants pr ON r.room_id = pr.room_id
     LEFT JOIN ${USER_SCHEMA}.profiles pp ON pr.participants_user_id = pp.user_id ${whereClause}
     GROUP BY r.room_id, p.user_nickname
-    ORDER BY r.${sortField} DESC
+    ORDER BY r.${sortField} ${sortOrder}
     LIMIT $${values.length + 1}
   `;
 
@@ -86,21 +106,38 @@ roomListModel.getRoomList = async ({ sort, cursor, limit }) => {
 };
 
 /**
- * 썸네일 이미지 경로를 base64로 변환
+ * 특정 방의 상세 정보 조회
  * 
- * @param {string} filePath 
- * @returns {Promise<string|null>}
+ * @function getRoomDetail
+ * @memberof roomListModel
+ * @param {string} roomId - 조회할 방의 UUID
+ * @returns {Promise<Object|null>} 방 상세 정보 객체 또는 null  
  */
-roomListModel.encodeImageToBase64 = async (filePath) => {
-  try {
-    if (!filePath || filePath === "-") return null;
-    const imageBuffer = await fs.readFile(filePath);
-    const ext = path.extname(filePath).substring(1);
-    return `data:image/${ext};base64,${imageBuffer.toString("base64")}`;
-  } catch (err) {
-    console.error("이미지 변환 오류:", err);
-    return null;
-  }
+roomListModel.getRoomDetail = async (roomId) => {
+  const query = `
+    SELECT r.room_id, r.room_title, r.room_description, r.room_scheduled,
+      r.room_created_at, r.room_thumbnail_img, r.max_participants,
+      p.user_nickname AS host_nickname,
+      COUNT(DISTINCT pr.participants_user_id)::INT AS participant_count,
+      json_agg(
+        DISTINCT jsonb_build_object(
+          'user_id', pp.user_id,
+          'user_nickname', pp.user_nickname,
+          'user_profile_img', pp.user_profile_img
+        )
+      ) FILTER (WHERE pr.participants_user_id IS NOT NULL) AS participants
+    FROM ${MAIN_SCHEMA}.room_info r
+    JOIN ${USER_SCHEMA}.profiles p ON r.room_host = p.user_id
+    LEFT JOIN ${MAIN_SCHEMA}.participants pr ON r.room_id = pr.room_id
+    LEFT JOIN ${USER_SCHEMA}.profiles pp ON pr.participants_user_id = pp.user_id
+    WHERE r.room_id = $1 AND r.deleted = FALSE
+    GROUP BY r.room_id, p.user_nickname
+  `;
+
+  const result = await db.query(query, [roomId]);
+  return result.rows.length > 0 ? result.rows[0] : null;
 };
+
+
 
 module.exports = roomListModel;
