@@ -19,6 +19,7 @@ var chatRouter = require("./routes/chat");
 // import router
 
 const jwtMiddleware = require("./middlewares/jwtMiddleware");
+const cors = require("cors");
 
 var app = express();
 const Port = 3000;
@@ -33,6 +34,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
+app.use(cors());
 
 //custom router
 app.use('/db-conn-test', dbConnRouter);
