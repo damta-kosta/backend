@@ -81,6 +81,28 @@ communityModel.getPosts = async (cursor, limit) => {
 };
 
 /**
+ * 게시글 상세 조회
+ * 
+ * @param {string} communityId - 조회할 게시글의 UUID
+ * @returns {Object|null} 게시글 상세 정보
+ */
+communityModel.getPostById = async  (communityId) => {
+  const query = `
+    SELECT c.community_id, c.community_title, c.community_body AS content, c.community_img AS imageBase64,
+      p.user_nickname AS writer_nickname, p.user_profile_img AS writer_profile_img, c.create_at
+    FROM ${MAIN_SCHEMA}.community c
+    JOIN ${USER_SCHEMA}.profiles p ON c.community_writer = p.user_id
+    WHERE c.community_id = $1 AND c.deleted = false
+  `;
+
+  const result = await db.query(query, [communityId]);
+
+  if(result.rowCount === 0) return null;
+
+  return result.rows[0];
+};
+
+/**
  * 게시글 삭제 (soft delete)
  * 
  * @param {string} communityId - 삭제할 게시글의 UUID

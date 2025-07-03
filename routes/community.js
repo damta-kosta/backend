@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const communityModel = require("../models/communityModel");
+const jwtMiddleware = require("../middlewares/jwtMiddleware");
 
 // POST /community/write 게시글 작성
-router.post("/write", async (req, res) => {
+router.post("/write", jwtMiddleware, async (req, res) => {
   try {
     const {title, content, imageBase64 } = req.body;
     const userId = req.user.user_id;
@@ -46,9 +47,26 @@ if (hasNext && posts.length > 1) {
   }
 });
 
+// GET /community/:id 게시글 상세 조회
+router.get("/:id", async (req, res) => {
+  try {
+    const communityId = req.params.id;
+
+    const post = await communityModel.getPostById(communityId);
+
+    if(!post) {
+      return res.status(404).json({ message: "존재하지 않거나 삭제된 게시글입니다." });
+    }
+
+    res.json({ post });
+  } catch (err) {
+    console.error("게시글 상세 조회 오류:", err);
+    res.status(500).json({ message: "게시글 조회 중 오류가 발생했습니다." });
+  }
+});
 
 // PATCH /community/:id/delete  게시글 삭제(soft delete)
-router.patch("/:id/delete", async (req, res) => {
+router.patch("/:id/delete", jwtMiddleware, async (req, res) => {
   try {
     const communityId = req.params.id;
     const userId = req.user?.user_id;

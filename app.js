@@ -40,7 +40,7 @@ app.use('/upload', jwtMiddleware, uploadRouter);
 app.use("/auth", authRouter);
 app.use('/users', jwtMiddleware, usersRouter);
 app.use('/rooms', jwtMiddleware, roomRouter);
-app.use("/community", jwtMiddleware, communityRouter);
+app.use("/community", communityRouter);
 app.use("/comments", jwtMiddleware, commentsRouter);
 app.use("/emblems", emblemsRouter);
 app.use("/roomList", roomListRouter);
