@@ -114,13 +114,13 @@ chatModel.insertChat = async (roomId, userId, chatMsg) => {
 };
 
 /**
- * 방장 수동 출석 체크
+ * 방장 수동 출석 체크 - 다중 유저
  * @param {string} roomId 
- * @param {string} targetUserId 
+ * @param {Array<string>} targetUserIds 
  * @param {string} requestUserId 
- * @returns {Promise<object|{error: string, status: number}>}
+ * @returns {Promise<{ updated: number } | { error: string, status: number }>}
  */
-chatModel.markAttendance = async (roomId, targetUserId, requestUserId) => {
+chatModel.markAttendanceBulk = async (roomId, targetUserIds, requestUserId) => {
   const room = await chatModel.getRoomInfo(roomId);
   if (!room) return { error: "해당 방이 존재하지 않습니다.", status: 404 };
 
@@ -128,48 +128,92 @@ chatModel.markAttendance = async (roomId, targetUserId, requestUserId) => {
     return { error: "방장이 아닙니다.", status: 403 };
   }
 
-  const now = new Date();
-  if (now >= new Date(room.room_scheduled)) {
+  const now = getDate(0);
+  if (new Date(now) >= new Date(room.room_scheduled)) {
     return { error: "모임 시간이 이미 지났습니다. 출석 체크 불가.", status: 403 };
   }
 
   const query = `
     UPDATE ${MAIN_SCHEMA}.participants
     SET attended_at = true
-    WHERE room_id = $1 AND participants_user_id = $2
-    RETURNING *;
+    WHERE room_id = $1 AND participants_user_id = ANY($2::uuid[])
+    RETURNING participants_user_id;
   `;
 
-  const { rows } = await db.query(query, [roomId, targetUserId]);
+  const { rows } = await db.query(query, [roomId, targetUserIds]);
 
-  const allDone = await db.query(query, [roomId, targetUserId]);
-  if(allDone) await chatModel.setAttendanceCheckedAt(roomId);
+  // 전체 참석자 출석 여부 확인
+  const allChecked = await chatModel.hasAllAttended(roomId);
+  if (!allChecked) {
+    return { error: "수동 출석은 전부 체크해야합니다.", status: 400 };
+  }
 
-  return rows[0] || null;
+  // 출석 완료 시각 기록
+  await chatModel.setAttendanceCheckedAt(roomId);
+
+  return { updated: rows.length };
 };
 
 /**
- * 자동 출석 체크 및 cold 평판 부여
+ * 자동 출석 체크 - attendedUsers는 true로, 나머지는 false + cold 평판 적용
  * @param {string} roomId 
- * @returns {Promise<{updated: number, autoColds: number}>}
+ * @param {Array<string>} attendedUserIds 
+ * @returns {Promise<{updatedTrue: number, updatedFalse: number, autoColds: number}>}
  */
-chatModel.autoAttendance = async (roomId) => {
-  const query = `
-    UPDATE ${MAIN_SCHEMA}.participants
-    SET attended_at = false
-    WHERE room_id = $1 AND attended_at IS NULL
-    RETURNING participants_user_id;
-  `;
-  const { rows } = await db.query(query, [roomId]);
-  const affectedUserIds = rows.map(row => row.participants_user_id);
+chatModel.autoAttendance = async (roomId, attendedUserIds) => {
+  const room = await chatModel.getRoomInfo(roomId);
+  if(!room) return { error: "해당 방이 존재하지 않습니다.", status: 404 };
 
-  for (const userId of affectedUserIds) {
-    await chatModel.updateReputation(userId, "cold");
+  if (room.room_host !== requestUserId) {
+    return { error: "방장이 아닙니다.", status: 403 };
   }
 
+  if (room.attendance_checked_at) {
+    return { error: "이미 출석 체크가 완료된 방입니다.", status: 400 };
+  }
+
+  const now = getDate(0);
+  if (new Date(now) >= new Date(room.room_scheduled)) {
+    return { error: "모임 시간이 이미 지났습니다. 출석 체크 불가.", status: 403 };
+  }
+
+  // true 처리
+  const updateTrueQuery = `
+    UPDATE ${MAIN_SCHEMA}.participants
+    SET attended_at = true
+    WHERE room_id = $1 AND participants_user_id = ANY($2::uuid[])
+    RETURNING participants_user_id;
+  `;
+  const { rows: trueRows } = await db.query(updateTrueQuery, [roomId, attendedUserIds]);
+
+  // false 처리 대상
+  const { rows: falseTargets } = await db.query(`
+    SELECT participants_user_id
+    FROM ${MAIN_SCHEMA}.participants
+    WHERE room_id = $1 AND participants_user_id != ALL($2::uuid[]) AND attended_at IS DISTINCT FROM true;
+  `, [roomId, attendedUserIds]);
+  const falseUserIds = falseTargets.map(row => row.participants_user_id);
+
+  // false 처리
+  await db.query(`
+    UPDATE ${MAIN_SCHEMA}.participants
+    SET attended_at = false
+    WHERE room_id = $1 AND participants_user_id = ANY($2::uuid[]);
+  `, [roomId, falseUserIds]);
+
+  // 출석자 → 미출석자 cold 반복
+  for (const from of attendedUserIds) {
+    for (const to of falseUserIds) {
+      await chatModel.updateReputation(to, "cold", from, roomId);
+    }
+  }
+
+  await chatModel.setAttendanceCheckedAt(roomId);
+
   return {
-    updated: affectedUserIds.length,
-    autoColds: affectedUserIds.length
+    updatedTrue: trueRows.length,
+    updatedFalse: falseUserIds.length,
+    autoColds: attendedUserIds.length * falseUserIds.length
   };
 };
 

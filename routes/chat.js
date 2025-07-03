@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const chatModel = require("../models/chatModel");
+const { getDate } = require("../modules/getData");
 
 
 // POST /chat/:roomId/chats 채팅 메시지 전송 (Socket.IO)
@@ -26,31 +27,51 @@ router.post("/:roomId/chats", async (req, res) => {
 router.put("/:roomId/check_attendance", async (req, res) => {
   try {
     const { roomId } = req.params;
-    const { targetUserId } = req.body;
+    const { targetUserIds } = req.body;
     const hostUserId = req.user?.user_id;
 
-    if (!targetUserId || !hostUserId) {
-      return res.status(400).json({ error: "필수 정보가 누락되었습니다." });
+    if (!Array.isArray(targetUserIds) || targetUserIds.length === 0) {
+      return res.status(400).json({ error: "출석 대상 사용자 목록(targetUserIds)이 필요합니다." });
     }
 
-    const result = await chatModel.markAttendance(roomId, targetUserId, hostUserId);
-    if (!result) return res.status(404).json({ error: "출석 대상이 존재하지 않거나 업데이트 실패" });
-    if (result?.error) return res.status(result.status).json({ error: result.error });
+    if (!hostUserId) {
+      return res.status(400).json({ error: "요청한 사용자 정보(JWT)가 유효하지 않습니다." });
+    }
 
-    return res.status(200).json({ message: "출석 완료", result });
+    const result = await chatModel.markAttendanceBulk(roomId, targetUserIds, hostUserId);
+
+    if (result?.error) {
+      return res.status(result.status).json({ error: result.error });
+    }
+
+    return res.status(200).json({
+      message: "모든 출석 처리가 완료되었습니다.",
+      updatedCount: result.updated
+    });
   } catch (err) {
     console.error("수동 출석 체크 오류:", err);
-    return res.status(500).json({ error: "출석 체크 실패" });
+    return res.status(500).json({ error: "수동 출석 체크 실패" });
   }
 });
 
-// POST /chat/:roomId/auto_attendance 자동 출석 체크 (미출석자 → false + cold 평판)
+// POST /chat/:roomId/auto_attendance 자동 출석 체크
 router.post("/:roomId/auto_attendance", async (req, res) => {
   try {
     const { roomId } = req.params;
-    const result = await chatModel.autoAttendance(roomId);
+    const { attendedUsers } = req.body;
+
+    if (!Array.isArray(attendedUsers)) {
+      return res.status(400).json({ error: "attendedUsers 배열이 필요합니다." });
+    }
+
+    const result = await chatModel.autoAttendance(roomId, attendedUsers);
+
+    if (result?.error) {
+      return res.status(result.status || 400).json({ error: result.error });
+    }
+
     return res.status(200).json({
-      message: "자동 출석 체크 완료",
+      message: "자동 출석 체크 및 cold 평판 처리 완료",
       ...result
     });
   } catch (err) {
@@ -58,6 +79,7 @@ router.post("/:roomId/auto_attendance", async (req, res) => {
     return res.status(500).json({ error: "자동 출석 체크 실패" });
   }
 });
+
 
 // PATCH /chat/:roomId/status 방 조기 종료
 router.patch("/:roomId/status", async (req, res) => {
@@ -78,6 +100,23 @@ router.patch("/:roomId/status", async (req, res) => {
 router.get("/:roomId/participants", async (req, res) => {
   try {
     const { roomId } = req.params;
+    const userId = req.user?.user_id;
+    
+    if(!roomId) {
+      return res.status(400).json({ error: "roomId가 필요합니다." });
+    }
+
+    if(!userId) {
+      return res.status(400).json({ error: "사용자 정보가 필요합니다." });
+    }
+
+    // 참가자인지 확인
+    const isParticipant = await chatModel.isUserParticipant(roomId, userId);
+
+    if(!isParticipant) {
+      return res.status(403).json({ error: "해당 방의 참가자가 아닙니다." });
+    }
+
     const participants = await chatModel.getParticipantsByRoom(roomId);
     return res.status(200).json({ participants });
   } catch (err) {
@@ -86,19 +125,26 @@ router.get("/:roomId/participants", async (req, res) => {
   }
 });
 
-// POST /chat/:userId/reputation 모임 종료 후 유저 평가 (따뜻해 / 차가워)
+// POST /chat/:userId/reputation?roomId=:roomId 모임 종료 후 유저 평가 (따뜻해 / 차가워)
 router.post("/:userId/reputation", async (req, res) => {
   try {
     const { userId } = req.params;
     const { reputation } = req.body;
     const { roomId } = req.query;
+    const requestUserId = req.user?.user_id;
+
+    const now = getDate(0);
 
     if (!["warm", "cold"].includes(reputation)) {
       return res.status(400).json({ error: "평판 값이 올바르지 않습니다." });
     }
 
-    if (!roomId) {
-      return res.status(400).json({ error: "roomId가 필요합니다." });
+    if (!requestUserId) {
+      return res.status(400).json({ error: "JWT 사용자 정보가 유효하지 않습니다." });
+    }
+
+    if (requestUserId === userId) {
+      return res.status(403).json({ error: "본인은 평가할 수 없습니다." });
     }
 
     // 출석 체크 완료 여부 확인
@@ -107,16 +153,20 @@ router.post("/:userId/reputation", async (req, res) => {
       return res.status(403).json({ error: "아직 출석 체크가 완료되지 않았습니다." });
     }
 
-    // room 종료 여부 확인
-    const allowed = await chatModel.isReputationAllowed(roomId);
-    if (!allowed) {
+    if (!room?.room_ended_at || new Date(now) > new Date(room.room_ended_at)) {
       return res.status(403).json({ error: "방이 이미 종료되어 평판 등록이 불가합니다." });
     }
 
-    // 출석자만 평판 가능
-    const isAttended = await chatModel.isUserAttended(roomId, userId);
-    if (!isAttended) {
-      return res.status(403).json({ error: "출석하지 않은 유저는 평가할 수 없습니다." });
+    // 평가 대상자 출석 여부 확인
+    const isTargetAttended = await chatModel.isUserAttended(roomId, userId);
+    if (!isTargetAttended) {
+      return res.status(403).json({ error: "출석하지 않은 유저는 평가 대상이 아닙니다." });
+    }
+
+    // 평가자 출석 여부 확인
+    const isEvaluatorAttended = await chatModel.isUserAttended(roomId, requestUserId);
+    if (!isEvaluatorAttended) {
+      return res.status(403).json({ error: "출석하지 않은 유저는 평판을 남길 수 없습니다." });
     }
 
     const result = await chatModel.updateReputation(userId, reputation);
