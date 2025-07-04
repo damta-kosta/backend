@@ -160,7 +160,7 @@ chatModel.markAttendanceBulk = async (roomId, targetUserIds, requestUserId) => {
  * @param {Array<string>} attendedUserIds 
  * @returns {Promise<{updatedTrue: number, updatedFalse: number, autoColds: number}>}
  */
-chatModel.autoAttendance = async (roomId, attendedUserIds) => {
+chatModel.autoAttendance = async (roomId, attendedUserIds, requestUserId) => {
   const room = await chatModel.getRoomInfo(roomId);
   if(!room) return { error: "해당 방이 존재하지 않습니다.", status: 404 };
 
@@ -244,7 +244,7 @@ chatModel.updateReputation = async (userId, reputation) => {
   const delta = reputation === "warm" ? 0.3 : -0.3;
   const query = `
     UPDATE ${USER_SCHEMA}.profiles
-    SET like_temp = GREATEST(0, LEAST(100, like_temp + $1))
+    SET like_temp = ROUND(GREATEST(0, LEAST(100, like_temp + $1)), 1)
     WHERE user_id = $2
     RETURNING like_temp;
   `;

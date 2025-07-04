@@ -41,9 +41,6 @@ userModel.getUserById = async (userId) => {
   };
 };
 
-
-
-
 /**
  * 닉네임 변경 가능 여부 확인용 (최근 변경일자 확인)
  * @param {string} userId - 사용자 UUID
