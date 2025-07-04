@@ -59,12 +59,17 @@ router.post("/:roomId/auto_attendance", async (req, res) => {
   try {
     const { roomId } = req.params;
     const { attendedUsers } = req.body;
+    const requestUserId = req.user?.user_id;
 
     if (!Array.isArray(attendedUsers)) {
       return res.status(400).json({ error: "attendedUsers 배열이 필요합니다." });
     }
 
-    const result = await chatModel.autoAttendance(roomId, attendedUsers);
+    if (!requestUserId) {
+      return res.status(400).json({ error: "사용자 인증 정보가 필요합니다." });
+    }
+
+    const result = await chatModel.autoAttendance(roomId, attendedUsers, requestUserId);
 
     if (result?.error) {
       return res.status(result.status || 400).json({ error: result.error });
