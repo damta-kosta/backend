@@ -15,7 +15,7 @@ router.get("/rooms", async (req, res) => {
 
     // 정렬 옵션 유효성 검증
     if (!["latest", "scheduled"].includes(sort)) {
-      return res.status(400).json({ message: "Invalid sort option" });
+      return res.status(400).json({ message: "유효한 sort option이 없습니다." });
     }
 
     // 방 리스트 조회

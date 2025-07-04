@@ -325,7 +325,7 @@ roomsModel.leaveRoom = async (roomId, userId) => {
     }
     if (hostResult.rows[0].room_host === userId) {
       return {
-        error: "방장은 비활성화(PATCH /rooms/:id/deactivate)로 나가야 합니다."
+        error: "방장은 비활성화로 나가야 합니다."
       };
     }
 
@@ -375,7 +375,7 @@ roomsModel.getRoomHost = async (roomId) => {
     if (result.rowCount === 0) return null;
     return result.rows[0].room_host;
   } catch (err) {
-    console.error("getRoomHost error:", err);
+    console.error("방장의 UUID를 조회할 수 없음:", err);
     return null;
   }
 };
