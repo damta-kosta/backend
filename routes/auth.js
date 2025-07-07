@@ -53,7 +53,7 @@ router.get("/kakao/callback", async (req, res) => {
     const token = jwt.sign({ kakaoId, user_id: user.user_id }, process.env.JWT_SECRET, { expiresIn: "3d"});
 
     // frontend로 리디렉션
-    res.redirect(`http://localhost:5173/auth/callback?token=${token}`);
+    res.redirect(`http://localhost:5173/auth/kakao/callback?token=${token}`);
   } catch(err) {
     console.error(err.response?.data || err);
     res.status(500).send("Kakao login failed");

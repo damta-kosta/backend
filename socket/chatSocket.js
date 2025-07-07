@@ -36,10 +36,13 @@ function chatSocket(io) {
           return socket.emit("errorMessage", "블랙리스트에 등록된 유저입니다.");
         }
 
+        const roomTitle = await chatModel.getRoomTitleById(roomId);
+        const userNickname = socket.data.user?.user_nickname || await chatModel.getNicknameByUserId(userId);
+
         socket.join(roomId);
         socket.data.userId = userId;
         socket.data.roomId = roomId;
-        console.log(`유저 ${userId}님이 ${roomId}에 입장했습니다.`);
+        console.log(`유저 ${userNickname}님이 [${roomTitle}]에 입장했습니다.`);
 
         emitRoomUserCount(io, roomId);
         emitRoomUserList(io, roomId);
@@ -50,9 +53,11 @@ function chatSocket(io) {
     });
 
     // 입력 중 타이핑 알림
-    socket.on("typing", ({ roomId, userId }) => {
-      if (roomId && userId) {
-        socket.to(roomId).emit("userTyping", { userId });
+    socket.on("typing", ({ roomId }) => {
+      if (roomId && socket.data.user) {
+        socket.to(roomId).emit("userTyping", {
+          user_nickname: socket.data.user.user_nickname
+        });
       }
     });
 
@@ -72,16 +77,30 @@ function chatSocket(io) {
     });
 
     // 방 나가기
-    socket.on("leaveRoom", () => {
+    socket.on("leaveRoom", async () => {
       const roomId = socket.data.roomId;
       const userId = socket.data.userId;
-      if (roomId) {
+
+      if (!roomId || !userId) return;
+
+      try {
+        // 닉네임과 방 제목 조회
+        const [nickname, roomTitle] = await Promise.all([
+          chatModel.getNicknameByUserId(userId),
+          chatModel.getRoomTitleById(roomId)
+        ]);
+
         socket.leave(roomId);
-        console.log(`유저 ${userId}님이 ${roomId}을 떠났습니다.`);
+        console.log(`유저 ${nickname}님이 [${roomTitle}] 방을 떠났습니다.`);
+
         emitRoomUserCount(io, roomId);
         emitRoomUserList(io, roomId);
+      } catch (err) {
+        console.error("leaveRoom 처리 중 오류:", err);
+        socket.emit("errorMessage", "방 나가기 처리 중 오류 발생");
       }
     });
+
 
     // 연결 해제
     socket.on("disconnect", () => {

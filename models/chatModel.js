@@ -367,4 +367,23 @@ chatModel.isBlacklisted = async (roomId, userId) => {
   return rows.length > 0;
 };
 
+chatModel.getRoomTitleById = async (roomId) => {
+  const query = `
+    SELECT room_title FROM main_schema.room_info
+    WHERE room_id = $1
+  `;
+  const result = await db.query(query, [roomId]);
+  return result.rows[0]?.room_title || "알 수 없음";
+}
+
+chatModel.getNicknameByUserId = async (userId) => {
+  const query = `
+    SELECT user_nickname FROM user_schema.profiles
+    WHERE user_id = $1
+  `;
+  const result = await db.query(query, [userId]);
+  return result.rows[0]?.user_nickname || "이름 없음";
+  
+}
+
 module.exports = chatModel;
