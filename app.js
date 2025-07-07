@@ -20,9 +20,10 @@ var chatRouter = require("./routes/chat");
 
 const jwtMiddleware = require("./middlewares/jwtMiddleware");
 const cors = require("cors");
+require("dotenv").config();
 
 var app = express();
-const Port = 3000;
+const PORT = process.env.PORT;
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -31,10 +32,13 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(cors({ 
+  origin: true, // CORS 활성화
+  credentials: true // 쿠키 주고받기 허용
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use(cors());
 
 //custom router
 app.use('/db-conn-test', dbConnRouter);
@@ -49,6 +53,8 @@ app.use("/roomList", roomListRouter);
 app.use("/chat", jwtMiddleware, chatRouter);
 //custom router
 
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.use(function(req, res, next) {
   next(createError(404));
 });
@@ -61,8 +67,5 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
-
-
-app.listen(Port, () => console.log(`Server started on port ${Port}`));
 
 module.exports = app;
