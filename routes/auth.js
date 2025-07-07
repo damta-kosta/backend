@@ -57,17 +57,7 @@ router.get("/kakao/callback", async (req, res) => {
     // 엠블럼 정보 추가
     const emblem = await emblemAssigner.getEmblemInfoByLikeTemp(user.like_temp);
 
-    res.json({
-      accessToken: token,
-      user: {
-        ...user,
-        emblem: emblem ? {
-          emblem_id: emblem.emblem_id,
-          emblem_name: emblem.emblem_name,
-          emblem_description: emblem.emblem_description
-        } : null
-      }
-    });
+    res.redirect(`http://localhost:5173/auth/callback?token=${token}`);
   } catch(err) {
     console.error(err.response?.data || err);
     res.status(500).send("Kakao login failed");
