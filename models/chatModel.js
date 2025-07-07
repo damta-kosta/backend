@@ -6,6 +6,7 @@ const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
 const USER_SCHEMA = process.env.DB_USER_SCHEMA;
 
 const chatModel = {};
+const reputationCache = new Set();
 
 /**
  * 방 정보 조회
@@ -20,6 +21,28 @@ chatModel.getRoomInfo = async (roomId) => {
   `;
   const { rows } = await db.query(query, [roomId]);
   return rows[0] || null;
+};
+
+/**
+ * 커서 기반으로 특정 방의 이전 채팅 메시지를 조회합니다.
+ * 무한 스크롤(페이지네이션) 방식 구현에 사용됩니다.
+ *
+ * @param {string} roomId - 채팅 메시지를 조회할 방의 ID
+ * @param {string} cursor - 기준이 되는 이전 메시지의 created_at 타임스탬프 (ISO 문자열)
+ * @param {number} [limit=30] - 조회할 메시지 개수 (기본값: 30)
+ * @returns {Promise<Array<object>>} 이전 메시지 객체 배열
+ */
+chatModel.getChatsBeforeCursor = async (roomId, cursor, limit = 30) => {
+  const query = `
+    SELECT c.chat_id, c.room_id, c.user_id, c.chat_msg, c.created_at, u.user_nickname, u.user_profile_img
+    FROM ${MAIN_SCHEMA}.chat c
+    JOIN ${USER_SCHEMA}.profiles u ON c.user_id = u.user_id
+    WHERE c.room_id = $1 AND c.created_at < $2
+    ORDER BY c.created_at DESC
+    LIMIT $3;
+  `;
+  const { rows } = await db.query(query, [roomId, cursor, limit]);
+  return rows;
 };
 
 /**
@@ -304,5 +327,44 @@ chatModel.getAllChatByRoom = async (roomId) => {
   return rows;
 };
 
+/**
+ * 이미 평판을 남긴 적 있는지 확인
+ * @param {string} roomId 
+ * @param {string} fromUserId 
+ * @param {string} toUserId 
+ * @returns {boolean}
+ */
+chatModel.checkAlreadyRated = (roomId, fromUserId, toUserId) => {
+  const key = `${roomId}:${fromUserId}->${toUserId}`;
+  return reputationCache.has(key);
+};
+
+/**
+ * 평판을 남긴 기록을 캐시에 저장
+ * @param {string} roomId 
+ * @param {string} fromUserId 
+ * @param {string} toUserId 
+ */
+chatModel.recordReputation = (roomId, fromUserId, toUserId) => {
+  const key = `${roomId}:${fromUserId}->${toUserId}`;
+  reputationCache.add(key);
+};
+
+/**
+ * 사용자가 특정 방에서 블랙리스트에 등록되어 있는지 확인
+ * @param {string} roomId 
+ * @param {string} userId 
+ * @returns {Promise<boolean>}
+ */
+chatModel.isBlacklisted = async (roomId, userId) => {
+  const query = `
+    SELECT 1
+    FROM ${MAIN_SCHEMA}.blacklist
+    WHERE room_id = $1 AND blacklist_user_id = $2
+    LIMIT 1;
+  `;
+  const { rows } = await db.query(query, [roomId, userId]);
+  return rows.length > 0;
+};
 
 module.exports = chatModel;

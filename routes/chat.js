@@ -23,6 +23,28 @@ router.post("/:roomId/chats", async (req, res) => {
   }
 });
 
+// GET /chat/:roomId/messages?cursor=&limit= 현재 진행중인 채팅 메시지 무한커서방식
+router.get("/:roomId/messages", async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const { cursor, limit = 30 } = req.query;
+    const userId = req.user?.user_id;
+
+    if (!userId || !cursor) {
+      return res.status(400).json({ error: "userId 또는 cursor 누락" });
+    }
+
+    const isParticipant = await chatModel.isUserParticipant(roomId, userId);
+    if (!isParticipant) return res.status(403).json({ error: "방 참가자만 접근 가능" });
+
+    const messages = await chatModel.getChatsBeforeCursor(roomId, cursor, limit);
+    return res.status(200).json({ messages });
+  } catch (err) {
+    console.error("이전 메시지 조회 실패:", err);
+    return res.status(500).json({ error: "메시지 조회 실패" });
+  }
+});
+
 // PUT /chat/:roomId/check_attendance 방장이 출석 수동 체크
 router.put("/:roomId/check_attendance", async (req, res) => {
   try {
@@ -152,6 +174,12 @@ router.post("/:userId/reputation", async (req, res) => {
       return res.status(403).json({ error: "본인은 평가할 수 없습니다." });
     }
 
+    //중복 평판 방지 캐시 검사
+    const alreadyRated = chatModel.checkAlreadyRated(roomId, requestUserId, userId);
+    if (alreadyRated) {
+      return res.status(403).json({ error: "이미 해당 유저를 평가했습니다." });
+    }
+
     // 출석 체크 완료 여부 확인
     const room = await chatModel.getRoomInfo(roomId);
     if (!room?.attendance_checked_at) {
@@ -175,6 +203,10 @@ router.post("/:userId/reputation", async (req, res) => {
     }
 
     const result = await chatModel.updateReputation(userId, reputation);
+
+    // 평판 기록을 캐시에 저장
+    chatModel.recordReputation(roomId, requestUserId, userId);
+
     return res.status(200).json({
       message: `${reputation === "warm" ? "따뜻함" : "차가움"} 평판이 적용되었습니다.`,
       like_temp: result.like_temp
