@@ -55,7 +55,7 @@ router.get("/kakao/callback", async (req, res) => {
     // JWT를 쿠키로 저장
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false,
       maxAge: 3 * 24 * 60 * 60 * 1000,
       sameSite: "lax"
     });
