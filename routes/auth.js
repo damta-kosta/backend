@@ -52,16 +52,8 @@ router.get("/kakao/callback", async (req, res) => {
     // JWT 발급
     const token = jwt.sign({ kakaoId, user_id: user.user_id }, process.env.JWT_SECRET, { expiresIn: "3d"});
 
-    // JWT를 쿠키로 저장
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: false,
-      maxAge: 3 * 24 * 60 * 60 * 1000,
-      sameSite: "lax"
-    });
-
     // frontend로 리디렉션
-    res.redirect("http://localhost:5173/auth/callback");
+    res.redirect(`http://localhost:5173/auth/callback?token=${token}`);
   } catch(err) {
     console.error(err.response?.data || err);
     res.status(500).send("Kakao login failed");
@@ -70,12 +62,6 @@ router.get("/kakao/callback", async (req, res) => {
 
 // POST /auth/logout JWT 쿠키 삭제
 router.post("/logout", (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax"
-  });
-
   res.status(200).json({ message: "로그아웃되었습니다." });
 });
 
