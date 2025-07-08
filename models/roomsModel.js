@@ -1,6 +1,5 @@
-const db = require("../db/index");
+const { db, pool } = require("../db/index");
 const { v4: uuidv4 } = require("uuid");
-const { getDate } = require("../modules/getData");
 const userModel = require("../models/userModel");
 require("dotenv").config();
 
@@ -79,7 +78,7 @@ roomsModel.getActiveRoomCount = async (userId) => {
 roomsModel.createRoom = async (params) => {
   const roomId = uuidv4();
   const participantId = uuidv4();
-  const now = getDate(0);
+  const now = new Date();
 
   try {
     // 방장 UUID 누락 시 예외 처리
@@ -87,9 +86,12 @@ roomsModel.createRoom = async (params) => {
       return { error: "방 생성에 필요한 호스트 정보가 누락되었습니다." };
     }
 
-    const scheduledDate = new Date(params.roomScheduled); // string → Date 객체
-    scheduledDate.setHours(23, 59, 0, 0); // 로컬 기준으로 시간 설정
-    const roomEndedAt = new Date(scheduledDate.getTime() - scheduledDate.getTimezoneOffset() * 60000).toISOString();
+    // roomScheduled → Date로 파싱
+    const roomScheduled = new Date(params.roomScheduled); // ex: "2025-07-10"
+
+    // roomEndedAt → 해당 날짜 23:59:00 (KST 기준)
+    const roomEndedAt = new Date(roomScheduled);
+    roomEndedAt.setHours(23, 59, 0, 0);
 
     // 현재 호스트인지 확인
     const isHost = await roomsModel.isHost(params.roomHost);
@@ -183,7 +185,7 @@ roomsModel.updateRoomInfo = async (roomId, params) => {
  * @returns {Promise<object>}
  */
 roomsModel.deactivateRoom = async (roomId) => {
-  const client = await db.connect();
+  const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
@@ -243,8 +245,6 @@ roomsModel.getRoomParticipants = async (roomId) => {
  * @returns {Promise<object>}
  */
 roomsModel.joinRoom = async (roomId, userId) => {
-  const now = getDate(0);
-
   try {
     // 블랙리스트 확인
     const blacklistQuery = `

@@ -1,6 +1,5 @@
-const db = require("../db/index");
+const { db } = require("../db/index");
 const { v4: uuidv4 } = require("uuid");
-const { getDate } = require("../modules/getData");
 
 const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
 const USER_SCHEMA = process.env.DB_USER_SCHEMA;
@@ -18,7 +17,7 @@ const communityModel = {};
  */
 communityModel.createPost = async(userId, title, content, imageBase64) => {
   const uuid = uuidv4();
-  const now = getDate(0);
+  const now = new Date();
 
   const checkUserQuery = `
     SELECT 1 FROM ${USER_SCHEMA}.profiles

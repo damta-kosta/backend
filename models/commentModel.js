@@ -1,6 +1,5 @@
-const db = require("../db");
+const { db } = require("../db");
 const { v4: uuidv4 } = require("uuid");
-const { getDate } = require("../modules/getData");
 
 const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
 const USER_SCHEMA = process.env.DB_USER_SCHEMA;
@@ -17,7 +16,7 @@ const commentModel = {};
  */
 commentModel.createComment = async (communityId, userId, commentBody) => {
   const  commentId = uuidv4();
-  const now = getDate(0);
+  const now = new Date();
 
   const query = `
     INSERT INTO ${MAIN_SCHEMA}.comment (
@@ -41,7 +40,7 @@ commentModel.createComment = async (communityId, userId, commentBody) => {
  */
 commentModel.createReply = async (communityId, userId, replyBody, parentCommentId) => {
   const replyId = uuidv4();
-  const now = getDate(0);
+  const now = new Date();
 
   const query = `
     INSERT INTO ${MAIN_SCHEMA}.comment (

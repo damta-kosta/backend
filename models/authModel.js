@@ -1,6 +1,5 @@
-const db = require("../db/index");
+const { db } = require("../db/index");
 const { v4: uuidv4 } = require("uuid");
-const { getDate } = require("../modules/getData");
 require("dotenv").config();
 
 const USER_SCHEMA = process.env.DB_USER_SCHEMA;
@@ -21,6 +20,8 @@ authModel.createUser = async (kakaoUser) => {
     }
   } = kakaoUser;
 
+  const now = new Date();
+
   const query = `
     INSERT INTO ${USER_SCHEMA}.profiles (
     user_id, social_id, user_name, user_nickname,
@@ -39,9 +40,9 @@ authModel.createUser = async (kakaoUser) => {
     nickname,
     nickname,
     0,
-    getDate(0),
-    getDate(0),
-    getDate(0), 
+    now,
+    now,
+    now, 
     false,
     null,
     "-",

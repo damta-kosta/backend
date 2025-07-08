@@ -1,6 +1,5 @@
-const db = require('../db');
+const { db } = require('../db');
 const { v4: uuidv4 } = require('uuid');
-const { getDate } = require("../modules/getData");
 
 const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
 const USER_SCHEMA = process.env.DB_USER_SCHEMA;
@@ -64,7 +63,7 @@ chatModel.hasAllAttended = async (roomId) => {
  * 출석 체크 완료 시간 기록
  */
 chatModel.setAttendanceCheckedAt = async (roomId) => {
-  const now = getDate(0);
+  const now = new Date();
 
   const query = `
     UPDATE ${MAIN_SCHEMA}.room_info
@@ -116,7 +115,7 @@ chatModel.isReputationAllowed = async (roomId) => {
  */
 chatModel.insertChat = async (roomId, userId, chatMsg) => {
   const chatId = uuidv4();
-  const createdAt = getDate(0);
+  const createdAt = new Date();
 
   const query = `
     WITH inserted AS (
@@ -151,7 +150,7 @@ chatModel.markAttendanceBulk = async (roomId, targetUserIds, requestUserId) => {
     return { error: "방장이 아닙니다.", status: 403 };
   }
 
-  const now = getDate(0);
+  const now = new Date();
   if (new Date(now) >= new Date(room.room_scheduled)) {
     return { error: "모임 시간이 이미 지났습니다. 출석 체크 불가.", status: 403 };
   }
@@ -195,7 +194,7 @@ chatModel.autoAttendance = async (roomId, attendedUserIds, requestUserId) => {
     return { error: "이미 출석 체크가 완료된 방입니다.", status: 400 };
   }
 
-  const now = getDate(0);
+  const now = new Date();
   if (new Date(now) >= new Date(room.room_scheduled)) {
     return { error: "모임 시간이 이미 지났습니다. 출석 체크 불가.", status: 403 };
   }
@@ -246,7 +245,7 @@ chatModel.autoAttendance = async (roomId, attendedUserIds, requestUserId) => {
  * @returns {Promise<object>}
  */
 chatModel.endChatRoom = async (roomId) => {
-  const now = getDate(0);
+  const now = new Date();
   const query = `
     UPDATE ${MAIN_SCHEMA}.room_info
     SET room_ended_at = $2

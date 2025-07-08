@@ -1,4 +1,4 @@
-const db = require("../db");
+const { db } = require("../db");
 
 const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
 

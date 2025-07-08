@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const userModel = require("../models/userModel");
 const emblemAssigner = require("../modules/emblemAssigner");
-const { getDate } = require("../modules/getData");
 
 // GET /users/me - 현재 로그인한 유저의 프로필 정보 + 엠블럼 조회
 router.get("/me", async (req, res) => {
@@ -40,20 +39,32 @@ router.put("/me/nickname", async (req, res) => {
     const user = await userModel.getNicknameChangeInfo(userId);
     if (!user) return res.status(404).json({ message: "계정을 찾을 수 없습니다." });
 
-    const changedAt = new Date(user.changed_at);
-    const limitStr = getDate(-30);
-    const limitDate = new Date(
-      `${limitStr.slice(0, 4)}-${limitStr.slice(4, 6)}-${limitStr.slice(6, 8)}T${limitStr.slice(9)}Z`
-    );
+    const createdAt = new Date(user.create_at); // 최초 가입일
+    const changedAt = new Date(user.changed_at); // 마지막 닉네임 변경일
 
-    if (user.user_nickname && changedAt > limitDate) {
-      return res.status(400).json({ message: "닉네임 변경에 실패 했습니다.", nickname: newNickname });
+    // 닉네임을 처음 설정한 경우 (== 최초 변경 허용)
+    const isFirstChange = createdAt.getTime() === changedAt.getTime();
+
+    // 이미 닉네임을 변경한 경우: 30일 경과 여부 확인
+    const now = new Date();
+    const daysDiff = Math.floor((now - changedAt) / (1000 * 60 * 60 * 24)); // 일수 차이 계산
+
+    if (!isFirstChange && daysDiff < 30) {
+      return res.status(400).json({
+        message: `닉네임은 30일마다 변경할 수 있습니다. (${30 - daysDiff}일 후 가능)`,
+        nickname: user.user_nickname,
+      });
     }
 
+    // 닉네임 변경 처리
     const updated = await userModel.updateNickname(userId, newNickname);
-    return res.json({ message: "닉네임이 성공적으로 변경되었습니다.", nickname: updated.user_nickname });
+    return res.json({
+      message: "닉네임이 성공적으로 변경되었습니다.",
+      nickname: updated.user_nickname,
+    });
+
   } catch (err) {
-    console.error("PUT /me/nickname error:", err);
+    console.error("닉네임 변경 오류:", err);
     return res.status(500).json({ message: "서버 오류" });
   }
 });

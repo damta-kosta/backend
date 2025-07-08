@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const db = require('../db/index');
+const { db } = require('../db/index');
 const self = {};
 
 /**
@@ -10,7 +10,6 @@ const self = {};
  *  @param {json} params base64 encoding 이미지와 target entity, target user, table 
  *  @return {json}
  */
- 
 self.imgUploader = async (schema, params) => {
     const query = {
         text: `UPDATE ${schema}.${params.table} SET ${params.target} = $1

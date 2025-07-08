@@ -1,5 +1,4 @@
-const db = require("../db/index");
-const { getDate } = require("../modules/getData");
+const { db } = require("../db/index");
 
 const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
 const USER_SCHEMA = process.env.DB_USER_SCHEMA;
@@ -48,7 +47,7 @@ userModel.getUserById = async (userId) => {
  */
 userModel.getNicknameChangeInfo = async(userId) => {
   const query = `
-    SELECT user_nickname, changed_at FROM ${USER_SCHEMA}.profiles
+    SELECT user_nickname, changed_at, create_at FROM ${USER_SCHEMA}.profiles
     WHERE user_id = $1 AND deleted = false
   `;
 
@@ -63,7 +62,7 @@ userModel.getNicknameChangeInfo = async(userId) => {
  * @returns {Object} 변경된 닉네임
  */
 userModel.updateNickname = async(userId, nickname) => {
-  const now =getDate(0);
+  const now = new Date();
   const query = `
     UPDATE ${USER_SCHEMA}.profiles
     SET user_nickname = $1, changed_at = $2, update_at = $2
@@ -81,7 +80,7 @@ userModel.updateNickname = async(userId, nickname) => {
  * @returns {Promise}
  */
 userModel.updateBio = async(userId, user_bio) => {
-  const now = getDate(0);
+  const now = new Date();
   const query = `
     UPDATE ${USER_SCHEMA}.profiles SET user_bio = $1, update_at = $2
     WHERE user_id = $3 AND deleted = false
@@ -97,7 +96,7 @@ userModel.updateBio = async(userId, user_bio) => {
  * @returns {Promise}
  */
 userModel.updateLocation = async(userId, location) => {
-  const now = getDate(0);
+  const now = new Date();
   const query = `
     UPDATE ${USER_SCHEMA}.profiles SET location = $1, update_at = $2
     WHERE user_id = $3 AND deleted = false
@@ -113,7 +112,7 @@ userModel.updateLocation = async(userId, location) => {
  * @returns {Promise}
  */
 userModel.softDelete = async(userId, deleted) => {
-  const now = getDate(0);
+  const now = new Date();
   const query = `
   UPDATE ${USER_SCHEMA}.profiles SET deleted = $1, update_at = $2
   WHERE user_id = $3 AND deleted = false

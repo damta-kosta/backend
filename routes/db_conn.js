@@ -3,7 +3,7 @@ var router = express.Router();
 require('dotenv').config();
 
 // import db module
-const db = require("../db/index");
+const { db } = require("../db/index");
 
 // exam db connection
 router.get('/', async (req, res, next) => {

@@ -1,8 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const chatModel = require("../models/chatModel");
-const { getDate } = require("../modules/getData");
-
 
 // POST /chat/:roomId/chats 채팅 메시지 전송 (Socket.IO)
 router.post("/:roomId/chats", async (req, res) => {
@@ -160,7 +158,7 @@ router.post("/:userId/reputation", async (req, res) => {
     const { roomId } = req.query;
     const requestUserId = req.user?.user_id;
 
-    const now = getDate(0);
+    const now = new Date();
 
     if (!["warm", "cold"].includes(reputation)) {
       return res.status(400).json({ error: "평판 값이 올바르지 않습니다." });
