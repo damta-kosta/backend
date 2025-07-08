@@ -1,4 +1,4 @@
-const db = require("../db");
+const { db } = require("../db");
 const emblemAssigner = {};
 
 // like_temp 범위별 엠블럼 매핑
