@@ -50,7 +50,12 @@ router.get("/kakao/callback", async (req, res) => {
     }
 
     // JWT 발급
-    const token = jwt.sign({ kakaoId, user_id: user.user_id }, process.env.JWT_SECRET, { expiresIn: "3d"});
+    const token = jwt.sign({
+      kakaoId,
+      user_id: user.user_id,
+      user_nickname: user.user_nickname,
+      user_profile_img: user.user_profile_img
+    }, process.env.JWT_SECRET, { expiresIn: "3d" });
 
     // frontend로 리디렉션
     res.redirect(`http://localhost:5173/auth/kakao/callback?token=${token}`);

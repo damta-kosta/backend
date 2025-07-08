@@ -53,7 +53,7 @@ communityModel.createPost = async(userId, title, content, imageBase64) => {
 communityModel.getPosts = async (cursor, limit) => {
   let query = `
     SELECT c.community_id, c.community_title, c.community_body AS content, c.community_img AS imageBase64,
-      p.user_nickname AS writer_nickname, c.create_at
+      p.user_nickname AS writer_nickname, p.user_profile_img AS writer_profile_img, c.create_at
     FROM ${MAIN_SCHEMA}.community c
     JOIN ${USER_SCHEMA}.profiles p ON c.community_writer = p.user_id
     WHERE c.deleted = false

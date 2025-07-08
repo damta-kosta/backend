@@ -16,7 +16,7 @@ authModel.createUser = async (kakaoUser) => {
   const {
     id: social_id,
     kakao_account: {
-      profile: { nickname }
+      profile: { nickname, profile_image_url }
     }
   } = kakaoUser;
 
@@ -45,7 +45,7 @@ authModel.createUser = async (kakaoUser) => {
     now, 
     false,
     null,
-    "-",
+    profile_image_url || "-",
     ""
   ];
 
@@ -56,7 +56,6 @@ authModel.createUser = async (kakaoUser) => {
     console.log(err);
     return err;
   }
-
 }
 
 module.exports = authModel;

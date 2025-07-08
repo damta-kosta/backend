@@ -28,15 +28,22 @@ router.get("/:roomId/messages", async (req, res) => {
     const { cursor, limit = 30 } = req.query;
     const userId = req.user?.user_id;
 
-    if (!userId || !cursor) {
-      return res.status(400).json({ error: "userId 또는 cursor 누락" });
+    if (!userId) {
+      return res.status(400).json({ error: "사용자 인증 정보가 누락되었습니다." });
     }
 
     const isParticipant = await chatModel.isUserParticipant(roomId, userId);
     if (!isParticipant) return res.status(403).json({ error: "방 참가자만 접근 가능" });
 
-    const messages = await chatModel.getChatsBeforeCursor(roomId, cursor, limit);
-    return res.status(200).json({ messages });
+    let messages;
+
+    if (cursor) {
+      messages = await chatModel.getChatsBeforeCursor(roomId, cursor, limit);
+    } else {
+      messages = await chatModel.getRecentChats(roomId, limit);
+    }
+
+    res.status(200).json({ messages });
   } catch (err) {
     console.error("이전 메시지 조회 실패:", err);
     return res.status(500).json({ error: "메시지 조회 실패" });
