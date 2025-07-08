@@ -23,4 +23,7 @@ const db = {
     }
 };
 
-module.exports = db;
+module.exports = {
+  db,     // 기존 query wrapper
+  pool    // pool 직접 export (connect용)
+};
