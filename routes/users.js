@@ -74,13 +74,20 @@ router.put("/me/user_bio", async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ message: "유효하지 않은 토큰입니다." });
 
-    const user = await userModel.getUserById(req.user.user_id);
+    const userId = req.user.user_id;
+    const user = await userModel.getUserById(userId);
     if (!user) return res.status(404).json({ message: "계정을 찾을 수 없습니다." });
 
-    await userModel.updateBio(req.user.user_id, req.body.user_bio);
+    const bio = req.body.user_bio;
+    if (typeof bio !== 'string' || bio.trim() === '') {
+      return res.status(400).json({ message: "user_bio는 비어 있을 수 없습니다." });
+    }
+
+    await userModel.updateBio(userId, bio);
     return res.json({ message: "한줄 소개가 업데이트 되었습니다." });
+
   } catch (err) {
-    console.error("PUT /me/user_bio error:", err);
+    console.error("한줄 소개 업데이트 오류: ", err.message, err.stack);
     return res.status(500).json({ message: "서버 오류" });
   }
 });
