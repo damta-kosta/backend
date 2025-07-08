@@ -306,7 +306,8 @@ roomsModel.joinRoom = async (roomId, userId) => {
 
 /**
  * 방 나가기
- * 방장은 직접 나갈 수 없고 방을 비활성화해야 함
+ * 방장은 활성 상태일 경우 비활성화로 나가야 하며,
+ * 종료된 방(room_ended_at 경과)일 경우 일반 유저처럼 나갈 수 있음
  * 
  * @param {string} roomId - 방 UUID
  * @param {string} userId - 유저 UUID
@@ -314,19 +315,30 @@ roomsModel.joinRoom = async (roomId, userId) => {
  */
 roomsModel.leaveRoom = async (roomId, userId) => {
   try {
-    // 호스트 여부 확인
+    // 호스트 여부 확인 + 종료 상태 확인
     const hostCheckQuery = `
-      SELECT room_host FROM ${MAIN_SCHEMA}.room_info
+      SELECT room_host, room_ended_at FROM ${MAIN_SCHEMA}.room_info
       WHERE room_id = $1 AND deleted = false
     `;
     const hostResult = await db.query(hostCheckQuery, [roomId]);
+
     if (hostResult.rowCount === 0) {
       return { error: "모임방이 존재하지 않습니다." };
     }
-    if (hostResult.rows[0].room_host === userId) {
-      return {
-        error: "방장은 비활성화로 나가야 합니다."
-      };
+
+    const { room_host, room_ended_at } = hostResult.rows[0];
+    const isHost = room_host === userId;
+
+    if (isHost) {
+      const now = new Date();
+      const endedAt = new Date(room_ended_at);
+      // room_ended_at이 없거나 아직 도달하지 않았으면 방장은 나갈 수 없음
+      if (!room_ended_at || now < endedAt) {
+        return {
+          error: "방장은 활성화 중인 방에서는 나갈 수 없습니다. 먼저 방을 비활성화해야 합니다."
+        };
+      }
+      // room_ended_at이 이미 지났으면 그냥 나갈 수 있음
     }
 
     // 참여 여부 확인
