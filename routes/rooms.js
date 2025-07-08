@@ -138,4 +138,62 @@ router.get('/hosted', async (req, res) => {
   }
 });
 
+/**
+ * room_ended_at 도달 시 자동 종료 및 join_state 감소 처리
+ * @param {string} roomId
+ * @returns {Promise<object|null>} - 처리 메시지 또는 null (종료 아직 안 된 경우)
+ */
+roomsModel.checkAndEndRoomIfDue = async (roomId) => {
+  const client = await pool.connect();
+  try {
+    // 방 종료 여부 확인
+    const { rows } = await client.query(`
+      SELECT room_ended_at, deleted FROM ${MAIN_SCHEMA}.room_info
+      WHERE room_id = $1
+    `, [roomId]);
+
+    if (rows.length === 0) return null;
+    const room = rows[0];
+
+    // 이미 종료됐거나 아직 종료 시간이 도달하지 않았으면 아무 것도 하지 않음
+    const now = new Date();
+    const endedAt = new Date(room.room_ended_at);
+
+    if (room.deleted || now < endedAt) return null;
+
+    await client.query("BEGIN");
+
+    // 방 종료 처리
+    await client.query(`
+      UPDATE ${MAIN_SCHEMA}.room_info
+      SET deleted = false, room_ended_at = $1
+      WHERE room_id = $2
+    `, [endedAt, roomId]);
+
+    // 참가자들 join_state 감소
+    const { rows: participants } = await client.query(`
+      SELECT DISTINCT participants_user_id
+      FROM ${MAIN_SCHEMA}.participants
+      WHERE room_id = $1
+    `, [roomId]);
+
+    for (const { participants_user_id } of participants) {
+      await client.query(`
+        UPDATE ${USER_SCHEMA}.profiles
+        SET join_state = CASE WHEN join_state > 0 THEN join_state - 1 ELSE 0 END
+        WHERE user_id = $1 AND deleted = false
+      `, [participants_user_id]);
+    }
+
+    await client.query("COMMIT");
+    return { message: "종료 시간 도달로 방 종료 및 방 참가 수 감소 완료" };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("checkAndEndRoomIfDue error:", err);
+    return { error: "방 종료 자동 처리 실패" };
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = router;

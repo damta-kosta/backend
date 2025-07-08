@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const chatModel = require("../models/chatModel");
+const roomsModel = require("../models/roomsModel");
 
 // POST /chat/:roomId/chats 채팅 메시지 전송 (Socket.IO)
 router.post("/:roomId/chats", async (req, res) => {
@@ -31,6 +32,8 @@ router.get("/:roomId/messages", async (req, res) => {
     if (!userId) {
       return res.status(400).json({ error: "사용자 인증 정보가 누락되었습니다." });
     }
+    
+    await roomsModel.checkAndEndRoomIfDue(roomId);
 
     const isParticipant = await chatModel.isUserParticipant(roomId, userId);
     if (!isParticipant) return res.status(403).json({ error: "방 참가자만 접근 가능" });
