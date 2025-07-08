@@ -35,14 +35,17 @@ function chatSocket(io) {
         if (isBlocked) {
           return socket.emit("errorMessage", "블랙리스트에 등록된 유저입니다.");
         }
-
-        const roomTitle = await chatModel.getRoomTitleById(roomId);
-        const userNickname = socket.data.user?.user_nickname || await chatModel.getNicknameByUserId(userId);
+        const roomInfo = await chatModel.getRoomInfo(roomId);
+        const isEnded = !!roomInfo?.room_ended_at;
 
         socket.join(roomId);
         socket.data.userId = userId;
         socket.data.roomId = roomId;
-        console.log(`유저 ${userNickname}님이 [${roomTitle}]에 입장했습니다.`);
+        socket.data.isEnded = isEnded;
+        
+        if (isEnded) {
+          socket.emit("roomEnded", { message: "이 방은 종료되어 채팅은 불가능합니다." });
+        }
 
         emitRoomUserCount(io, roomId);
         emitRoomUserList(io, roomId);
@@ -63,8 +66,10 @@ function chatSocket(io) {
 
     // 채팅 메시지 수신
     socket.on("chatMessage", async ({ roomId, userId, message }) => {
-      if (!message?.trim()) {
-        return; // 빈 메시지 무시
+      if (!message?.trim()) return; // 빈 메시지 무시
+
+      if (socket.data.isEnded) {
+        return socket.emit("errorMessage", "이미 종료된 방에서는 채팅할 수 없습니다.");
       }
 
       try {
@@ -84,15 +89,7 @@ function chatSocket(io) {
       if (!roomId || !userId) return;
 
       try {
-        // 닉네임과 방 제목 조회
-        const [nickname, roomTitle] = await Promise.all([
-          chatModel.getNicknameByUserId(userId),
-          chatModel.getRoomTitleById(roomId)
-        ]);
-
         socket.leave(roomId);
-        console.log(`유저 ${nickname}님이 [${roomTitle}] 방을 떠났습니다.`);
-
         emitRoomUserCount(io, roomId);
         emitRoomUserList(io, roomId);
       } catch (err) {
@@ -100,7 +97,6 @@ function chatSocket(io) {
         socket.emit("errorMessage", "방 나가기 처리 중 오류 발생");
       }
     });
-
 
     // 연결 해제
     socket.on("disconnect", () => {
