@@ -1,7 +1,7 @@
-const {Pool} = require('pg');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-const db = new Pool({
+const pool = new Pool({
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
@@ -9,11 +9,18 @@ const db = new Pool({
     port: Number(process.env.DB_PORT)
 });
 
-// 연결될 때마다 타임존 설정
-db.on('connect', (client) => {
-    client.query("SET TIME ZONE 'Asia/Seoul'")
-    .then(() => console.log("Timezone set to Asia/Seoul"))
-    .catch(err => console.error("Failed to set timezone", err));
-});
+// pool.query 그대로 사용하면서, 내부에서 timezone 설정 후 쿼리 실행하도록 래핑
+const db = {
+    query: async (text, params) => {
+        const client = await pool.connect();
+        try {
+        await client.query("SET TIME ZONE 'Asia/Seoul'");
+        const res = await client.query(text, params);
+        return res;
+        } finally {
+        client.release();
+        }
+    }
+};
 
 module.exports = db;
