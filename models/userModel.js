@@ -124,22 +124,28 @@ userModel.softDelete = async(userId, deleted) => {
 /**
  * 현재 사용자가 호스트이거나 참가 중인 모든 방을 조회한다.
  *
+ * [조건]
+ * - 소프트 삭제되지 않은 방만 조회 (r.deleted = false)
+ * - 종료된 방도 포함됨 (room_ended_at 조건 없음)
+ * - 유저가 방장이거나 participants 테이블에 있는 경우만 해당
+ *
  * @param {string} userId - 현재 로그인한 사용자의 UUID
- * @returns {Promise<Array>} - 사용자가 참여 중인 방 목록
- *  각 방 객체는 다음 정보를 포함:
- *    - room_id: 방 UUID
- *    - room_title: 방 제목
- *    - room_scheduled: 예정된 날짜
- *    - room_thumbnail_img: base64 이미지 문자열
- *    - deleted: 삭제 여부
- *    - is_host: 해당 방의 호스트 여부
+ * @returns {Promise<Array>} - 사용자가 참여 중인 모든 방 목록
+ *
+ * 각 방 객체는 다음 정보를 포함한다:
+ * - room_id {string}: 방 UUID
+ * - room_title {string}: 방 제목
+ * - room_scheduled {Date}: 예정된 날짜
+ * - room_thumbnail_img {string}: 썸네일(base64 또는 경로)
+ * - deleted {boolean}: 소프트 삭제 여부
+ * - is_host {boolean}: 해당 방의 호스트 여부 (true/false)
  */
 userModel.getMyActiveRooms = async (userId) => {
   const query = `
     SELECT r.room_id, r.room_title, r.room_scheduled, r.room_thumbnail_img, r.deleted, (r.room_host = $1) AS is_host
     FROM ${MAIN_SCHEMA}.room_info r
     LEFT JOIN ${MAIN_SCHEMA}.participants p ON r.room_id = p.room_id
-    WHERE (r.room_host = $1 OR p.participants_user_id = $1) AND r.deleted = false AND r.room_ended_at > NOW()
+    WHERE (r.room_host = $1 OR p.participants_user_id = $1) AND r.deleted = false
     GROUP BY r.room_id
     ORDER BY r.room_scheduled DESC
   `;
