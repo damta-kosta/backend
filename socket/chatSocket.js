@@ -81,6 +81,29 @@ function chatSocket(io) {
       }
     });
 
+    // 채팅 동기화 요청 (재접속 또는 초기 메시지 불러오기)
+    socket.on("syncChat", async ({ roomId, cursor, limit = 30 }) => {
+      if (!roomId || !socket.data.userId) {
+        return socket.emit("errorMessage", "roomId 또는 사용자 정보가 없습니다.");
+      }
+
+      try {
+        const isParticipant = await chatModel.isUserParticipant(roomId, socket.data.userId);
+        if (!isParticipant) {
+          return socket.emit("errorMessage", "방 참가자가 아닙니다.");
+        }
+
+        const messages = cursor
+        ? await chatModel.getChatsBeforeCursor(roomId, cursor, limit)
+        : await chatModel.getRecentChats(roomId, limit);
+
+        socket.emit("syncChat", messages);
+      } catch (err) {
+        console.error("syncChat 오류:", err);
+        socket.emit("errorMessage", "채팅 동기화 중 오류 발생");
+      }
+    });
+
     // 방 나가기
     socket.on("leaveRoom", async () => {
       const roomId = socket.data.roomId;

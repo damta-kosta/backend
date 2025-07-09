@@ -23,6 +23,43 @@ chatModel.getRoomInfo = async (roomId) => {
 };
 
 /**
+ * 주어진 roomId에 해당하는 최신 채팅 메시지를 조회합니다.
+ * 이 함수는 커서가 없는 경우 최신 메시지를 불러올 때 사용됩니다.
+ * 
+ * 반환 결과는 created_at 기준으로 **내림차순(DESC)** 정렬되어 있으며,
+ * 최신 메시지가 먼저 옵니다. (UI 표시 시에는 reverse() 필요할 수 있음)
+ *
+ * @async
+ * @function getRecentChats
+ * @memberof chatModel
+ * 
+ * @param {string} roomId - 채팅 메시지를 조회할 방의 UUID
+ * @param {number} [limit=30] - 조회할 메시지 개수 (기본값: 30)
+ * 
+ * @returns {Promise<Array<{
+ *   chat_id: string,
+ *   room_id: string,
+ *   user_id: string,
+ *   chat_msg: string,
+ *   created_at: string,
+ *   user_nickname: string,
+ *   user_profile_img: string
+ * }>>} - 채팅 메시지 객체 배열
+ */
+chatModel.getRecentChats = async (roomId, limit = 30) => {
+  const query = `
+    SELECT c.chat_id, c.room_id, c.user_id, c.chat_msg, c.created_at, u.user_nickname, u.user_profile_img
+    FROM ${MAIN_SCHEMA}.chat c
+    JOIN ${USER_SCHEMA}.profiles u ON c.user_id = u.user_id
+    WHERE c.room_id = $1
+    ORDER BY c.created_at DESC
+    LIMIT $2;
+  `;
+  const { rows } = await db.query(query, [roomId, limit]);
+  return rows;
+};
+
+/**
  * 커서 기반으로 특정 방의 이전 채팅 메시지를 조회합니다.
  * 무한 스크롤(페이지네이션) 방식 구현에 사용됩니다.
  *
