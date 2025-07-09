@@ -1,7 +1,6 @@
 const { db, pool } = require("../db/index");
 const { v4: uuidv4 } = require("uuid");
-const userModel = require("../models/userModel");
-const uploadModel = require("./uploadModel");
+const chatModel = require("../models/chatModel");
 require("dotenv").config();
 
 const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
@@ -296,7 +295,7 @@ roomsModel.joinRoom = async (roomId, userId) => {
     }
 
     // 2. 진행 중인 방 개수 확인 (host 또는 participant로)
-    const activeRooms = await userModel.getMyActiveRooms(userId);
+    const activeRooms = await chatModel.getMyActiveRooms(userId);
     if (activeRooms.length >= 2) {
       return { error: "이미 두 개의 진행 중인 모임에 참여 중입니다." };
     }
