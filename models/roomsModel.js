@@ -112,13 +112,14 @@ roomsModel.createRoom = async (params) => {
         max_participants, room_created_at, room_ended_at,
         room_scheduled, room_host, current_participants, deleted
       ) VALUES (
-        $1, NULL, $2, $3, $4,
-        $5, $6, $7, $8, $9, false
+        $1, $2, $3, $4, $5,
+        $6, $7, $8, $9, $10, false
       )
     `;
 
     const values = [
       roomId,
+      params.roomThumbnailImg || null,
       params.roomTitle,
       params.roomDescription || null,
       params.maxParticipants,
@@ -132,16 +133,16 @@ roomsModel.createRoom = async (params) => {
     // room_info에 방 정보 insert
     await db.query(query, values);
 
-    // 이미지 업로드
-    if (params.roomThumbnailImg) {
-      await uploadModel.imgUploader(MAIN_SCHEMA, {
-        base64Image: params.roomThumbnailImg,
-        table: 'room_info',
-        target: 'room_thumbnail_img',
-        column: 'room_id',
-        uuid: roomId
-      });
-    }
+    // // 이미지 업로드
+    // if (params.roomThumbnailImg) {
+    //   await uploadModel.imgUploader(MAIN_SCHEMA, {
+    //     base64Image: params.roomThumbnailImg,
+    //     table: 'room_info',
+    //     target: 'room_thumbnail_img',
+    //     column: 'room_id',
+    //     uuid: roomId
+    //   });
+    // }
     
     // 호스트를 participants 테이블에 자동 등록
     await db.query(`
