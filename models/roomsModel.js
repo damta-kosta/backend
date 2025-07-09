@@ -1,6 +1,7 @@
 const { db, pool } = require("../db/index");
 const { v4: uuidv4 } = require("uuid");
 const userModel = require("../models/userModel");
+const uploadModel = require("./uploadModel");
 require("dotenv").config();
 
 const MAIN_SCHEMA = process.env.DB_MAIN_SCHEMA;
@@ -111,14 +112,13 @@ roomsModel.createRoom = async (params) => {
         max_participants, room_created_at, room_ended_at,
         room_scheduled, room_host, current_participants, deleted
       ) VALUES (
-        $1, $2, $3, $4, $5,
-        $6, $7, $8, $9, $10, false
+        $1, NULL, $2, $3, $4,
+        $5, $6, $7, $8, $9, false
       )
     `;
 
     const values = [
       roomId,
-      params.roomThumbnailImg,
       params.roomTitle,
       params.roomDescription || null,
       params.maxParticipants,
@@ -131,6 +131,17 @@ roomsModel.createRoom = async (params) => {
 
     // room_info에 방 정보 insert
     await db.query(query, values);
+
+    // 이미지 업로드
+    if (params.roomThumbnailImg) {
+      await uploadModel.imgUploader(MAIN_SCHEMA, {
+        base64Image: params.roomThumbnailImg,
+        table: 'room_info',
+        target: 'room_thumbnail_img',
+        column: 'room_id',
+        uuid: roomId
+      });
+    }
     
     // 호스트를 participants 테이블에 자동 등록
     await db.query(`
@@ -154,27 +165,67 @@ roomsModel.createRoom = async (params) => {
  * 방 정보 수정
  * @param {*} params 
  */
-roomsModel.updateRoomInfo = async (roomId, params) => {
-  const query = `
-    UPDATE ${MAIN_SCHEMA}.room_info
-    SET room_title = $1, room_description = $2, room_thumbnail_img = $3, room_scheduled = $4
-    WHERE room_id = $5 AND deleted = false
-  `;
-
-  const values = [
-    params.roomTitle,
-    params.roomDescription || null,
-    params.roomThumbnailImg,
-    params.roomScheduled,
-    roomId
-  ];
-
+roomsModel.updateRoomInfo = async (roomId, params, requesterUserId) => {
+  const client = await pool.connect();
   try {
-    await db.query(query, values);
+    await client.query('BEGIN');
+
+    // 기존 호스트 확인
+    const hostResult = await client.query(
+      `SELECT room_host FROM ${MAIN_SCHEMA}.room_info WHERE room_id = $1 AND deleted = false`,
+      [roomId]
+    );
+
+    if (hostResult.rowCount === 0) {
+      throw new Error("존재하지 않는 방입니다.");
+    }
+
+    const currentHost = hostResult.rows[0].room_host;
+
+    // 수정 요청자가 방장인지 확인
+    if (currentHost !== requesterUserId) {
+      throw new Error("방 정보 수정 권한이 없습니다. (호스트 전용)");
+    }
+
+    const updateQuery = `
+      UPDATE ${MAIN_SCHEMA}.room_info
+      SET room_title = $1, room_description = $2, room_scheduled = $3, room_host = COALESCE($4, room_host)
+      WHERE room_id = $5 AND deleted = false
+    `;
+
+    const updateValues = [
+      params.roomTitle,
+      params.roomDescription || null,
+      params.roomScheduled,
+      params.roomHost || null,
+      roomId
+    ];
+
+    await client.query(updateQuery, updateValues);
+
+    // 썸네일 이미지가 전달된 경우에만 업데이트
+    if (params.roomThumbnailImg) {
+      const uploadResult = await uploadModel.imgUploader(MAIN_SCHEMA, {
+        base64Image: params.roomThumbnailImg,
+        table: 'room_info',
+        target: 'room_thumbnail_img',
+        column: 'room_id',
+        uuid: roomId
+      });
+
+      if(uploadResult.error) {
+        throw new Error(uploadResult.error);
+      }
+    }
+
+    await client.query('COMMIT');
     return { message: "방 정보가 수정되었습니다." };
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error("updateRoomInfo error:", err);
     return { message: "방 정보 수정에 실패하였습니다." };
+  } finally {
+    client.release();
   }
 };
 

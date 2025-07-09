@@ -39,7 +39,14 @@ router.post('/', async (req, res) => {
 // PATCH /rooms/:id/modify 방정보 수정
 router.patch('/:id/modify', async (req, res) => {
   const roomId = req.params.id;
-  const result = await roomsModel.updateRoomInfo(roomId, req.body);
+  const userId = req.user.user_id;
+
+  const result = await roomsModel.updateRoomInfo(roomId, req.body, userId);
+
+  if (result.message.includes("권한이 없습니다")) {
+    return res.status(403).json(result);
+  }
+  
   res.json(result);
 });
 
