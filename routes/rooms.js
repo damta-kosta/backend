@@ -41,13 +41,22 @@ router.patch('/:id/modify', async (req, res) => {
   const roomId = req.params.id;
   const userId = req.user.user_id;
 
-  const result = await roomsModel.updateRoomInfo(roomId, req.body, userId);
+  try {
+    const result = await roomsModel.updateRoomInfo(roomId, req.body, userId);
 
-  if (result.message.includes("권한이 없습니다")) {
-    return res.status(403).json(result);
+    if (result.message.includes("권한이 없습니다")) {
+      return res.status(403).json({ message: result.message });
+    }
+
+    if (result.message.includes("실패")) {
+      return res.status(500).json({ message: result.message });
+    }
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("PATCH /rooms/:id/modify router error:", err);
+    res.status(500).json({ message: "방 수정 중 서버 오류가 발생했습니다." });
   }
-  
-  res.json(result);
 });
 
 // PATCH /rooms/:id/deactivate 방 비활성화
