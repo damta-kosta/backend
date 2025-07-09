@@ -36,16 +36,26 @@ function chatSocket(io) {
           return socket.emit("errorMessage", "블랙리스트에 등록된 유저입니다.");
         }
         const roomInfo = await chatModel.getRoomInfo(roomId);
-        const isEnded = !!roomInfo?.room_ended_at;
+
+        const now = new Date();
+        const roomScheduled = new Date(roomInfo.room_scheduled);
+        const roomEndTime = new Date(
+          roomScheduled.getFullYear(),
+          roomScheduled.getMonth(),
+          roomScheduled.getDate(),
+          23, 59, 59, 999 // 당일 23:59:59.999
+        );
+
+        const isEnded = !!roomInfo?.room_ended_at || now > roomEndTime;
+
+        if (isEnded) {
+          socket.emit("roomEnded", { message: "이 방은 종료되어 채팅은 불가능합니다." });
+        }
 
         socket.join(roomId);
         socket.data.userId = userId;
         socket.data.roomId = roomId;
         socket.data.isEnded = isEnded;
-        
-        if (isEnded) {
-          socket.emit("roomEnded", { message: "이 방은 종료되어 채팅은 불가능합니다." });
-        }
 
         emitRoomUserCount(io, roomId);
         emitRoomUserList(io, roomId);
