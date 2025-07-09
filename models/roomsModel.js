@@ -187,8 +187,9 @@ roomsModel.updateRoomInfo = async (roomId, params, requesterUserId) => {
 
     const updateQuery = `
       UPDATE ${MAIN_SCHEMA}.room_info
-      SET room_title = $1, room_description = $2, room_scheduled = $3, room_host = COALESCE($4, room_host)
-      WHERE room_id = $5 AND deleted = false
+      SET room_title = $1, room_description = $2, room_scheduled = $3,
+        room_host = COALESCE($4, room_host), room_thumbnail_img = COALESCE($5, room_thumbnail_img)
+      WHERE room_id = $6 AND deleted = false
     `;
 
     const updateValues = [
@@ -196,25 +197,11 @@ roomsModel.updateRoomInfo = async (roomId, params, requesterUserId) => {
       params.roomDescription || null,
       params.roomScheduled,
       params.roomHost || null,
+      params.roomThumbnailImg || null,
       roomId
     ];
 
     await client.query(updateQuery, updateValues);
-
-    // 썸네일 이미지가 전달된 경우에만 업데이트
-    if (params.roomThumbnailImg) {
-      const uploadResult = await uploadModel.imgUploader(MAIN_SCHEMA, {
-        base64Image: params.roomThumbnailImg,
-        table: 'room_info',
-        target: 'room_thumbnail_img',
-        column: 'room_id',
-        uuid: roomId
-      });
-
-      if(uploadResult.error) {
-        throw new Error(uploadResult.error);
-      }
-    }
 
     await client.query('COMMIT');
     return { message: "방 정보가 수정되었습니다." };
