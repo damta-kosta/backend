@@ -10,20 +10,26 @@ const roomListModel = {};
 /**
  * 썸네일 이미지 경로를 base64로 변환
  * 
- * @param {string} filePath 
+ * @param {string} filePathOrBase64 
  * @returns {Promise<string|null>}
  */
-roomListModel.encodeImageToBase64 = async (filePath) => {
+roomListModel.encodeImageToBase64 = async (filePathOrBase64) => {
   try {
-    if (!filePath || filePath === "-") return null;
-    const imageBuffer = await fs.readFile(filePath);
-    const ext = path.extname(filePath).substring(1);
+    if (!filePathOrBase64 || filePathOrBase64 === "-" || filePathOrBase64.startsWith("data:image/")) {
+      // 이미 base64 문자열이거나 유효하지 않은 경우 그대로 반환
+      return filePathOrBase64 === "-" ? null : filePathOrBase64;
+    }
+
+    // 그 외에는 경로로 간주하고 파일을 읽어 변환
+    const imageBuffer = await fs.readFile(filePathOrBase64);
+    const ext = path.extname(filePathOrBase64).substring(1);
     return `data:image/${ext};base64,${imageBuffer.toString("base64")}`;
   } catch (err) {
     console.error("이미지 변환 오류:", err);
     return null;
   }
 };
+
 
 /**
  * 방 리스트 조회 (커서 기반 페이지네이션 - latest | scheduled 지원)

@@ -106,7 +106,7 @@ roomsModel.createRoom = async (params) => {
       return { error: "이미 두 개의 모임에 참여 중이어서 방을 생성할 수 없습니다." };
     }
 
-    const query = `
+    const insertQuery = `
       INSERT INTO ${MAIN_SCHEMA}.room_info (
         room_id, room_thumbnail_img, room_title, room_description,
         max_participants, room_created_at, room_ended_at,
@@ -117,7 +117,7 @@ roomsModel.createRoom = async (params) => {
       )
     `;
 
-    const values = [
+    const insertValues = [
       roomId,
       params.roomThumbnailImg || null,
       params.roomTitle,
@@ -131,18 +131,7 @@ roomsModel.createRoom = async (params) => {
     ];
 
     // room_info에 방 정보 insert
-    await db.query(query, values);
-
-    // // 이미지 업로드
-    // if (params.roomThumbnailImg) {
-    //   await uploadModel.imgUploader(MAIN_SCHEMA, {
-    //     base64Image: params.roomThumbnailImg,
-    //     table: 'room_info',
-    //     target: 'room_thumbnail_img',
-    //     column: 'room_id',
-    //     uuid: roomId
-    //   });
-    // }
+    await db.query(insertQuery, insertValues);
     
     // 호스트를 participants 테이블에 자동 등록
     await db.query(`
@@ -150,10 +139,18 @@ roomsModel.createRoom = async (params) => {
       VALUES ($1, $2, $3)
     `, [participantId, roomId, params.roomHost]);
 
+    // 이미지 다시 조회
+    const { rows } = await db.query(`
+      SELECT room_thumbnail_img FROM ${MAIN_SCHEMA}.room_info
+      WHERE room_id = $1
+    `, [roomId]);
+
+    const thumbnailBase64 = rows[0]?.room_thumbnail_img || null;
+
     return {
       room_id: roomId,
       title: params.roomTitle,
-      thumbnailBase64: params.roomThumbnailImg,
+      thumbnailBase64,
       message: "모임이 성공적으로 생성되었습니다.",
     };
   } catch (err) {
