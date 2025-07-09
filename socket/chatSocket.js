@@ -35,6 +35,7 @@ function chatSocket(io) {
         if (isBlocked) {
           return socket.emit("errorMessage", "블랙리스트에 등록된 유저입니다.");
         }
+
         const roomInfo = await chatModel.getRoomInfo(roomId);
 
         const now = new Date();
@@ -56,6 +57,10 @@ function chatSocket(io) {
         socket.data.userId = userId;
         socket.data.roomId = roomId;
         socket.data.isEnded = isEnded;
+        socket.data.roomTitle = roomInfo.title;
+
+        // 입장 로그 출력
+        console.log(`${socket.data.user.user_nickname}님이 '${roomInfo.title}' 방에 입장했습니다.`);
 
         emitRoomUserCount(io, roomId);
         emitRoomUserList(io, roomId);
@@ -75,15 +80,20 @@ function chatSocket(io) {
     });
 
     // 채팅 메시지 수신
-    socket.on("chatMessage", async ({ roomId, userId, message }) => {
-      if (!message?.trim()) return; // 빈 메시지 무시
+    socket.on("chatMessage", async ({ roomId, userId, message, chat_msg, chatMsg, chat_Msg }) => {
+      const finalMessage = message || chat_msg || chatMsg || chat_Msg;
+
+      if (!finalMessage?.trim()) return; // 빈 메시지 무시
 
       if (socket.data.isEnded) {
         return socket.emit("errorMessage", "이미 종료된 방에서는 채팅할 수 없습니다.");
       }
 
       try {
-        const savedChat = await chatModel.insertChat(roomId, userId, message);
+        // 채팅 로그 출력
+        console.log(`${socket.data.user.user_nickname}님의 메시지: ${finalMessage}`);
+
+        const savedChat = await chatModel.insertChat(roomId, userId, finalMessage);
         io.to(roomId).emit("chatMessage", savedChat);
       } catch (err) {
         console.error("chatMessage 저장 오류:", err);
@@ -104,8 +114,8 @@ function chatSocket(io) {
         }
 
         const messages = cursor
-        ? await chatModel.getChatsBeforeCursor(roomId, cursor, limit)
-        : await chatModel.getRecentChats(roomId, limit);
+          ? await chatModel.getChatsBeforeCursor(roomId, cursor, limit)
+          : await chatModel.getRecentChats(roomId, limit);
 
         socket.emit("syncChat", messages);
       } catch (err) {
@@ -122,6 +132,10 @@ function chatSocket(io) {
       if (!roomId || !userId) return;
 
       try {
+        const roomInfo = await chatModel.getRoomInfo(roomId);
+        // 퇴장 로그 출력
+        console.log(`${socket.data.user.user_nickname}님이 '${roomInfo.title}' 방에서 나갔습니다.`);
+
         socket.leave(roomId);
         emitRoomUserCount(io, roomId);
         emitRoomUserList(io, roomId);
