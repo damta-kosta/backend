@@ -108,8 +108,8 @@ router.post("/me/location", async (req, res) => {
   }
 });
 
-// PATCH /users/me/delete - 회원 탈퇴 처리 (soft delete)
-router.patch("/me/delete", async (req, res) => {
+// DELETE /users/me/delete - 회원 탈퇴 처리 (soft delete)
+router.delete("/me/delete", async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ message: "유효하지 않은 토큰입니다." });
 
@@ -119,7 +119,7 @@ router.patch("/me/delete", async (req, res) => {
     await userModel.softDelete(req.user.user_id, req.body.deleted);
     return res.json({ message: "계정이 탈퇴 처리 되었습니다." });
   } catch (err) {
-    console.error("PATCH /me/delete error:", err);
+    console.error("회원 탈퇴 실패:", err);
     return res.status(500).json({ message: "서버 오류" });
   }
 });

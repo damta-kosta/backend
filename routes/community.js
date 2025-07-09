@@ -65,8 +65,8 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// PATCH /community/:id/delete  게시글 삭제(soft delete)
-router.patch("/:id/delete", jwtMiddleware, async (req, res) => {
+// DELETE /community/:id/delete  게시글 삭제(soft delete)
+router.delete("/:id/delete", jwtMiddleware, async (req, res) => {
   try {
     const communityId = req.params.id;
     const userId = req.user?.user_id;

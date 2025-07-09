@@ -52,8 +52,8 @@ router.get("/:communityId/comments", async (req, res) => {
   }
 });
 
-// PATCH /comments/comment/:commentId/delete 댓글 삭제
-router.patch("/comment/:commentId/delete", async (req, res) => {
+// DELETE /comments/comment/:commentId/delete 댓글 삭제
+router.delete("/comment/:commentId/delete", async (req, res) => {
   try {
     const commentId = req.params.commentId;
     const userId = req.user.user_id;
@@ -67,8 +67,8 @@ router.patch("/comment/:commentId/delete", async (req, res) => {
   }
 });
 
-// PATCH /comments/reply/:replyId/delete 답글 삭제
-router.patch("/reply/:replyId/delete", async (req, res) =>{
+// DELETE /comments/reply/:replyId/delete 답글 삭제
+router.delete("/reply/:replyId/delete", async (req, res) =>{
   try {
     const replyId = req.params.replyId;
     const userId = req.user.user_id;

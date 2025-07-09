@@ -59,8 +59,8 @@ router.patch('/:id/modify', async (req, res) => {
   }
 });
 
-// PATCH /rooms/:id/deactivate 방 비활성화
-router.patch('/:id/deactivate', async (req, res) => {
+// DELETE /rooms/:id/deactivate 방 비활성화
+router.delete('/:id/deactivate', async (req, res) => {
   const roomId = req.params.id;
   const result = await roomsModel.deactivateRoom(roomId);
   res.json(result);
