@@ -124,23 +124,4 @@ router.delete("/me/delete", async (req, res) => {
   }
 });
 
-// GET /users/me/rooms - 유저가 참여 중인 모든 방 리스트 조회
-// 삭제되지 않은 모든 방을 조회하며, 다음과 같은 방이 포함됩니다:
-// - 사용자가 호스트인 방
-// - 사용자가 참가자로 등록된 방
-// - 방의 상태(예정/진행 중/종료됨)에 관계없이 모두 포함됨
-// (단, 삭제된 방은 제외됨)
-router.get("/me/rooms", async (req, res) => {
-  try {
-    if (!req.user) return res.status(401).json({ message: "유효하지 않은 토큰입니다." });
-
-    const userId = req.user.user_id;
-    const result = await userModel.getMyActiveRooms(userId);
-    return res.status(200).json(result);
-  } catch (err) {
-    console.error("GET /me/rooms error:", err);
-    return res.status(500).json({ message: "서버 오류" });
-  }
-});
-
 module.exports = router;
