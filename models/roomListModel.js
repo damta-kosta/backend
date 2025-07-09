@@ -50,7 +50,7 @@ roomListModel.getRoomList = async ({ sort, cursor, limit }) => {
     throw new Error("유효하지않은 sort option 입니다.");
   }
 
-  let whereClause = `WHERE r.deleted = FALSE`;
+  let whereClause = `WHERE r.deleted = FALSE AND r.room_scheduled >= now()`;
   const values = [];
 
   if (cursor) {

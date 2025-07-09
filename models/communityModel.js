@@ -26,7 +26,7 @@ communityModel.createPost = async(userId, title, content, imageBase64) => {
   const checkResult = await db. query(checkUserQuery, [userId]);
 
   if(checkResult.rowCount === 0) {
-    const error = new Error("작석 권한이 없습니다. (유효하지 않은 사용자)");
+    const error = new Error("작성 권한이 없습니다. (유효하지 않은 사용자)");
     error.status = 403;
     throw error;
   }
