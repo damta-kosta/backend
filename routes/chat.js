@@ -254,7 +254,7 @@ router.get("/:roomId/allChat", async (req, res) => {
   }
 });
 
-// GET /chat/rooms - 유저가 참여 중인 모든 방 리스트 조회
+// GET /chat/myRooms - 유저가 참여 중인 모든 방 리스트 조회
 // 삭제되지 않은 모든 방을 조회하며, 다음과 같은 방이 포함됩니다:
 // - 사용자가 호스트인 방
 // - 사용자가 참가자로 등록된 방
