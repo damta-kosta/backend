@@ -62,7 +62,7 @@ function chatSocket(io) {
         emitRoomUserCount(io, roomId);
         emitRoomUserList(io, roomId);
 
-        // 전체 채팅 메시지 emit 추가
+        // 전체 채팅 메시지 emit 추가 
         const isParticipant = await chatModel.isUserParticipant(roomId, userId);
         if (isParticipant) {
           const allChats = await chatModel.getAllChatByRoom(roomId);
