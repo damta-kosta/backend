@@ -22,11 +22,11 @@ function chatSocket(io) {
   io.use(socketAuthMiddleware);
 
   io.on("connection", (socket) => {
-    // console.log("소켓 연결됨:", socket.id);
+    console.log("소켓 연결됨:", socket.id);
 
     // 방 입장
     socket.on("joinRoom", async ({ roomId, userId }, callback) => {
-      // console.log("joinRoom 요청:", { roomId, userId });
+      console.log("joinRoom 요청:", { roomId, userId });
       if (!roomId || !userId) {
         return callback?.({ status: "fail", error: "roomId 또는 userId가 누락되었습니다." });
       }
