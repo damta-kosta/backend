@@ -5,7 +5,6 @@ const commentModel = require("../models/commentModel");
 // POST /comments/:communityId/write 댓글 작성
 router.post("/:communityId/write", async (req, res) => {
   try {
-    console.log("req.body:", req.body);
     const { comment_body } = req.body;
     const communityId = req.params.communityId;
     const userId = req.user.user_id;
