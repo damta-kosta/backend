@@ -61,6 +61,18 @@ function chatSocket(io) {
 
         emitRoomUserCount(io, roomId);
         emitRoomUserList(io, roomId);
+
+        // 전체 채팅 메시지 emit 추가
+        const isParticipant = await chatModel.isUserParticipant(roomId, userId);
+        if (isParticipant) {
+          const allChats = await chatModel.getAllChatByRoom(roomId);
+          socket.emit("syncAllChat", {
+            room_id: roomId,
+            chat: allChats
+          });
+        } else {
+          socket.emit("errorMessage", "채팅 기록을 보기 위해서는 방 참가자여야 합니다.");
+        }
       } catch (err) {
         console.error("joinRoom 오류:", err);
         socket.emit("errorMessage", "방 입장 중 오류 발생");
