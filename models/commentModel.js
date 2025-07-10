@@ -11,10 +11,10 @@ const commentModel = {};
  * 
  * @param {string} communityId - 대상 게시글 UUID
  * @param {string} userId - 댓글 작성자 UUID
- * @param {string} commentBody - 댓글 내용
+ * @param {string} comment_body - 댓글 내용
  * @returns {Object} 생성된 댓글 ID
  */
-commentModel.createComment = async (communityId, userId, commentBody) => {
+commentModel.createComment = async (communityId, userId, comment_body) => {
   const  commentId = uuidv4();
   const now = new Date();
 
@@ -24,7 +24,7 @@ commentModel.createComment = async (communityId, userId, commentBody) => {
     ) VALUES ($1, $2, $3, $4, null, $5, false) RETURNING comment_id
   `;
 
-  const values = [commentId, communityId, userId, commentBody, now];
+  const values = [commentId, communityId, userId, comment_body, now];
   const result = await db.query(query, values);
   return result.rows[0];
 };
@@ -34,11 +34,11 @@ commentModel.createComment = async (communityId, userId, commentBody) => {
  * 
  * @param {string} communityId - 대상 게시글 UUID
  * @param {string} userId - 대댓글 작성자 UUID
- * @param {string} replyBody - 대댓글 내용
+ * @param {string} reply_body - 대댓글 내용
  * @param {string} parentCommentId - 부모 댓글 UUID
  * @returns {Object} 생성된 대댓글 ID
  */
-commentModel.createReply = async (communityId, userId, replyBody, parentCommentId) => {
+commentModel.createReply = async (communityId, userId, reply_body, parentCommentId) => {
   const replyId = uuidv4();
   const now = new Date();
 
@@ -48,7 +48,7 @@ commentModel.createReply = async (communityId, userId, replyBody, parentCommentI
     ) VALUES ($1, $2, $3, $4, $5, $6, false) RETURNING comment_id
   `;
 
-  const values = [replyId, communityId, userId, replyBody, parentCommentId, now];
+  const values = [replyId, communityId, userId, reply_body, parentCommentId, now];
   const result = await db.query(query, values);
   return result.rows[0];
 };

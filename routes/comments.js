@@ -5,11 +5,16 @@ const commentModel = require("../models/commentModel");
 // POST /comments/:communityId/write 댓글 작성
 router.post("/:communityId/write", async (req, res) => {
   try {
-    const { commentBody } = req.body;
+    console.log("req.body:", req.body);
+    const { comment_body } = req.body;
     const communityId = req.params.communityId;
     const userId = req.user.user_id;
 
-    const result = await commentModel.createComment(communityId, userId, commentBody);
+    if (!comment_body?.trim()) {
+        return res.status(400).json({ message: "댓글 내용을 입력해주세요." });
+    }
+
+    const result = await commentModel.createComment(communityId, userId, comment_body);
     res.status(201).json({ comment_id: result.comment_id, message: "댓글이 등록되었습니다." });
   } catch(err) {
     console.error(err);
@@ -22,10 +27,10 @@ router.post("/reply/:commentId", async (req, res) => {
   try {
     const communityId = req.params.communityId;
     const parentCommentId = req.params.commentId;
-    const { replyBody } = req.body;
+    const { reply_body } = req.body;
     const userId = req.user.user_id;
 
-    const result = await commentModel.createReply(communityId, userId, replyBody, parentCommentId);
+    const result = await commentModel.createReply(communityId, userId, reply_body, parentCommentId);
     res.status(201).json({ comment_id: result.comment_id, message: "답글이 등록되었습니다." });
   } catch(err) {
     console.error(err);
