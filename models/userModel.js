@@ -106,6 +106,23 @@ userModel.updateLocation = async(userId, location) => {
 };
 
 /**
+ * 프로필 이미지 변경
+ * @param {string} userId - 사용자 UUID
+ * @param {string} userProfileImg - base64 또는 URL 형식의 이미지 데이터
+ * @returns {Promise}
+ */
+userModel.updateProfileImage = async(userId, userProfileImg) => {
+  const now = new Date();
+  const query = `
+    UPDATE ${USER_SCHEMA}.profiles
+    SET user_profile_img = $1, update_at = $2
+    WHERE user_id = $3 AND deleted = false
+  `;
+
+  return db. query(query, [userProfileImg, now, userId]);
+}
+
+/**
  * 회원 탈퇴 (Soft Delete 처리)
  * @param {string} userId - 사용자 UUID
  * @param {boolean} deleted - 탈퇴 여부 (true)

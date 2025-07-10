@@ -108,6 +108,29 @@ router.post("/me/location", async (req, res) => {
   }
 });
 
+// PUT /users/me/profileImg - 프로필 이미지 변경
+router.put("/me/profileImg", async(req, res) => {
+  try {
+    if(!req.user) {
+      return res.status(401).json({ message: "유효하지 않은 토큰입니다." });
+    }
+
+    const userId = req.user.user_id;
+    const { user_profile_img } = req.body;
+
+    if(typeof user_profile_img !== "string" || user_profile_img.trim() === "") {
+      return res.status(400).json({ message: "프로필 이미지를 제공해주세요." });
+    }
+
+    await userModel.updateProfileImage(userId, user_profile_img);
+    return res.json({ message: "프로필 이미지가 성공적으로 변경되었습니다." });
+
+  } catch(err) {
+    console.error("프로필 이미지 변경 오류 : ", err);
+    return res.status(500).json({ message: "서버 오류" });
+  }
+});
+
 // DELETE /users/me/delete - 회원 탈퇴 처리 (soft delete)
 router.delete("/me/delete", async (req, res) => {
   try {

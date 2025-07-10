@@ -46,7 +46,6 @@ function chatSocket(io) {
           socket.emit("roomEnded", { message: "이 방은 종료되어 채팅은 불가능합니다." });
         }
         // console.log("현재 시간:", now.toISOString());
-        // console.log("방 종료 시간:", roomEndedAt.toISOString());
         // console.log("isEnded:", isEnded);
 
         socket.join(roomId);
