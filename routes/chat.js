@@ -7,15 +7,14 @@ const roomsModel = require("../models/roomsModel");
 router.post("/:roomId/chats", async (req, res) => {
   try {
     const { roomId } = req.params;
-    const { chat_msg, message, chatMsg, chat_Msg } = req.body;
-    const finalMsg = chat_msg || message || chatMsg || chat_Msg;
+    const { message } = req.body;
     const userId = req.user?.user_id;
 
-    if (!finalMsg || !userId) {
+    if (!message || !userId) {
       return res.status(400).json({ error: "메시지 또는 사용자 정보가 없습니다." });
     }
 
-    const result = await chatModel.insertChat(roomId, userId, finalMsg);
+    const result = await chatModel.insertChat(roomId, userId, message);
     return res.status(201).json(result);
   } catch (err) {
     console.error("채팅 전송 오류:", err);

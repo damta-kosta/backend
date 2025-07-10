@@ -14,7 +14,7 @@ const reputationCache = new Set();
  */
 chatModel.getRoomInfo = async (roomId) => {
   const query = `
-    SELECT room_host, room_scheduled, room_ended_at, attendance_checked_at
+    SELECT room_host, room_scheduled, room_ended_at, attendance_checked_at, room_title AS title
     FROM ${MAIN_SCHEMA}.room_info
     WHERE room_id = $1;
   `;
@@ -150,7 +150,7 @@ chatModel.isReputationAllowed = async (roomId) => {
  * @param {string} chatMsg 
  * @returns {Promise<object>}
  */
-chatModel.insertChat = async (roomId, userId, chatMsg) => {
+chatModel.insertChat = async (roomId, userId, message) => {
   const chatId = uuidv4();
   const createdAt = new Date();
 
@@ -167,7 +167,7 @@ chatModel.insertChat = async (roomId, userId, chatMsg) => {
     JOIN ${USER_SCHEMA}.profiles p ON i.user_id = p.user_id;
   `;
 
-  const values = [chatId, roomId, userId, chatMsg, createdAt];
+  const values = [chatId, roomId, userId, message, createdAt];
   const { rows } = await db.query(query, values);
   return rows[0];
 };

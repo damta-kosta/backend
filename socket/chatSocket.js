@@ -26,6 +26,7 @@ function chatSocket(io) {
 
     // 방 입장
     socket.on("joinRoom", async ({ roomId, userId }) => {
+      // console.log("joinRoom 요청:", { roomId, userId });
       if (!roomId || !userId) {
         return socket.emit("errorMessage", "roomId 또는 userId가 누락되었습니다.");
       }
@@ -39,19 +40,15 @@ function chatSocket(io) {
         const roomInfo = await chatModel.getRoomInfo(roomId);
 
         const now = new Date();
-        const roomScheduled = new Date(roomInfo.room_scheduled);
-        const roomEndTime = new Date(
-          roomScheduled.getFullYear(),
-          roomScheduled.getMonth(),
-          roomScheduled.getDate(),
-          23, 59, 59, 999 // 당일 23:59:59.999
-        );
-
-        const isEnded = !!roomInfo?.room_ended_at || now > roomEndTime;
+        const roomEndedAt = new Date(roomInfo.room_ended_at);
+        const isEnded = now >= roomEndedAt;
 
         if (isEnded) {
           socket.emit("roomEnded", { message: "이 방은 종료되어 채팅은 불가능합니다." });
         }
+        console.log("현재 시간:", now.toISOString());
+        console.log("방 종료 시간:", roomEndedAt.toISOString());
+        console.log("isEnded:", isEnded);
 
         socket.join(roomId);
         socket.data.userId = userId;
@@ -80,20 +77,26 @@ function chatSocket(io) {
     });
 
     // 채팅 메시지 수신
-    socket.on("chatMessage", async ({ roomId, userId, message, chat_msg, chatMsg, chat_Msg }) => {
-      const finalMessage = message || chat_msg || chatMsg || chat_Msg;
+    socket.on("chatMessage", async ({ roomId, userId, message }) => {
+      console.log("[chatMessage 수신]", { roomId, userId, message });
 
-      if (!finalMessage?.trim()) return; // 빈 메시지 무시
+      if (!message?.trim()) return; // 빈 메시지 무시
 
       if (socket.data.isEnded) {
+        console.log("채팅 차단됨: 종료된 방입니다.");
         return socket.emit("errorMessage", "이미 종료된 방에서는 채팅할 수 없습니다.");
       }
 
+      console.log(
+          `${socket.data.user.user_nickname}님의 메시지: ${message}`
+      );
+
       try {
         // 채팅 로그 출력
-        console.log(`${socket.data.user.user_nickname}님의 메시지: ${finalMessage}`);
+        console.log(`${socket.data.user.user_nickname}님의 메시지: ${message}`);
 
-        const savedChat = await chatModel.insertChat(roomId, userId, finalMessage);
+        const savedChat = await chatModel.insertChat(roomId, userId, message);
+        console.log("메시지 브로드캐스트:", savedChat);
         io.to(roomId).emit("chatMessage", savedChat);
       } catch (err) {
         console.error("chatMessage 저장 오류:", err);
