@@ -63,6 +63,36 @@ roomsModel.getActiveRoomCount = async (userId) => {
 };
 
 /**
+ * 현재 사용자가 해당 방의 방장인지 확인하는 메소드2
+ * @param {string} userId - 유저 UUID
+ * @param {string} roomId - 방 UUID
+ * @returns {Promise<boolean>}
+ */
+roomsModel.isHosted = async (userId, roomId) => {
+  const query = `
+    SELECT room_host
+    FROM ${MAIN_SCHEMA}.room_info
+    WHERE room_id = $1 AND deleted = false
+  `;
+
+  try {
+    const result = await db.query(query, [roomId]);
+    
+    if (result.rowCount === 0) {
+      return false; // 방이 존재하지 않는 경우, 방장이 아님
+    }
+
+    const roomHost = result.rows[0].room_host;
+
+    return roomHost === userId; // 방장이면 true, 아니면 false
+  } catch (err) {
+    console.error("isHosted error:", err);
+    return false; // 에러가 발생한 경우도 방장이 아님
+  }
+};
+
+
+/**
  * 방 생성 모듈
  * roomTitle (방 제목),
  * roomHost (방 호스트),

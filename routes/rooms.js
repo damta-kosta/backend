@@ -88,6 +88,23 @@ router.get('/:id/participants/me', async (req, res) => {
   }
 });
 
+// GET /rooms/:id/isHosted 사용자가 방장인지 확인
+router.get("/:id/isHosted", async (req, res) => {
+  const roomId = req.params.id;
+  const userId = req.user.user_id;
+
+  try {
+    // 모델에서 방장 여부 확인
+    const isHost = await roomsModel.isHosted(userId, roomId);
+
+    // 방장 여부에 따라 응답 반환
+    res.json({ isHost });
+  } catch (err) {
+    console.error("GET /rooms/:id/isHosted error:", err);
+    res.status(500).json({ error: "방장 확인 중 오류가 발생했습니다." });
+  }
+});
+
 // POST /rooms/:id/joinRoom 방 참가
 router.post('/:id/joinRoom', async (req, res) => {
   const roomId = req.params.id;
