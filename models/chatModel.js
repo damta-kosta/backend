@@ -316,15 +316,16 @@ chatModel.updateReputation = async (userId, reputation) => {
  * @param {string} roomId - 방 ID
  * @returns {Promise<Array<object>>} 참가자 정보 배열
  */
-chatModel.getParticipantsByRoom = async (roomId) => {
+chatModel.getParticipantsByRoom = async (roomId, hostUserId) => {
   const query = `
-    SELECT p.participants_user_id AS user_id, u.user_nickname, u.user_profile_img, p.attended_at
+    SELECT p.participants_user_id AS user_id, u.user_nickname, u.user_profile_img, p.attended_at,
+      CASE WHEN p.participants_user_id = $2 THEN true ELSE false END AS is_host
     FROM ${MAIN_SCHEMA}.participants p
     JOIN ${USER_SCHEMA}.profiles u ON p.participants_user_id = u.user_id
     WHERE p.room_id = $1
     ORDER BY u.user_nickname;
   `;
-  const { rows } = await db.query(query, [roomId]);
+  const { rows } = await db.query(query, [roomId, hostUserId]);
   return rows;
 };
 

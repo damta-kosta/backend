@@ -136,24 +136,27 @@ router.get("/:roomId/participants", async (req, res) => {
   try {
     const { roomId } = req.params;
     const userId = req.user?.user_id;
-    
-    if(!roomId) {
-      return res.status(400).json({ error: "roomId가 필요합니다." });
+
+    if (!roomId || !userId) {
+      return res.status(400).json({ error: "roomId 또는 사용자 정보가 필요합니다." });
     }
 
-    if(!userId) {
-      return res.status(400).json({ error: "사용자 정보가 필요합니다." });
-    }
-
-    // 참가자인지 확인
     const isParticipant = await chatModel.isUserParticipant(roomId, userId);
-
-    if(!isParticipant) {
+    if (!isParticipant) {
       return res.status(403).json({ error: "해당 방의 참가자가 아닙니다." });
     }
 
-    const participants = await chatModel.getParticipantsByRoom(roomId);
-    return res.status(200).json({ participants });
+    const room = await chatModel.getRoomInfo(roomId);
+    if (!room) {
+      return res.status(404).json({ error: "방 정보를 찾을 수 없습니다." });
+    }
+
+    const participants = await chatModel.getParticipantsByRoom(roomId, room.room_host);
+
+    return res.status(200).json({
+      participants,
+      room_scheduled: room.room_scheduled,
+    });
   } catch (err) {
     console.error("참가자 목록 조회 오류:", err);
     return res.status(500).json({ error: "참가자 목록 조회 실패" });
