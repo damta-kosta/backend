@@ -303,7 +303,7 @@ chatModel.updateReputation = async (userId, reputation) => {
   const delta = reputation === "warm" ? 0.3 : -0.3;
   const query = `
     UPDATE ${USER_SCHEMA}.profiles
-    SET like_temp = ROUND(GREATEST(0, LEAST(100, like_temp + $1)), 1)
+    SET like_temp = ROUND(GREATEST(0, LEAST(100, like_temp + $1))::numeric, 1)
     WHERE user_id = $2
     RETURNING like_temp;
   `;
