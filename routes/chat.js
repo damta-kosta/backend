@@ -277,4 +277,32 @@ router.get("/myRooms", async (req, res) => {
   }
 });
 
+// GET /chat/:roomId/myReputation_logs
+// 내가 평가한 유저 목록 조회
+router.get("/:roomId/myReputation_logs", async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const fromUserId = req.user?.user_id;
+
+    if (!fromUserId) {
+      return res.status(401).json({ error: "사용자 인증 정보가 필요합니다." });
+    }
+
+    const isParticipant = await chatModel.isUserParticipant(roomId, fromUserId);
+    if (!isParticipant) {
+      return res.status(403).json({ error: "해당 방의 참가자가 아닙니다." });
+    }
+
+    const ratedUserIds = chatModel.getRatedUserIds(roomId, fromUserId);
+
+    return res.status(200).json({
+      reputation_user_ids: ratedUserIds,
+    });
+  } catch (err) {
+    console.error("내 평판 기록 조회 오류:", err);
+    return res.status(500).json({ error: "평판 기록 조회 실패" });
+  }
+});
+
+
 module.exports = router;

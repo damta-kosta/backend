@@ -472,5 +472,25 @@ chatModel.isUserHost = async (roomId, userId) => {
   return rows.length > 0;
 };
 
+/**
+ * 내가 평가한(toUser) 유저 ID 목록 조회 (room 기준)
+ * @param {string} roomId 
+ * @param {string} fromUserId 
+ * @returns {Array<string>}
+ */
+chatModel.getRatedUserIds = (roomId, fromUserId) => {
+  const ratedUserIds = [];
+
+  for (const key of reputationCache) {
+    const [keyRoomId, pair] = key.split(":");
+    const [from, to] = pair.split("->");
+
+    if (keyRoomId === roomId && from === fromUserId) {
+      ratedUserIds.push(to);
+    }
+  }
+
+  return ratedUserIds;
+};
 
 module.exports = chatModel;
