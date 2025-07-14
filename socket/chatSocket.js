@@ -54,8 +54,12 @@ function chatSocket(io) {
         socket.data.isEnded = isEnded;
         socket.data.roomTitle = roomInfo.title;
 
+        const isHost = await chatModel.isUserHost(roomId, userId);
+        socket.data.isHost = isHost;
+
         // 입장 로그 출력
         console.log(`${socket.data.user.user_nickname}님이 '${roomInfo.title}' 방에 입장했습니다.`);
+        console.log(`🟡 방장 여부:`, isHost);
 
         emitRoomUserCount(io, roomId);
         emitRoomUserList(io, roomId);

@@ -461,4 +461,16 @@ chatModel.getMyActiveRooms = async (userId) => {
   }
 };
 
+chatModel.isUserHost = async (roomId, userId) => {
+  const query = `
+    SELECT 1
+    FROM ${MAIN_SCHEMA}.room_info
+    WHERE room_id = $1 AND room_host = $2
+    LIMIT 1;
+  `;
+  const { rows } = await db.query(query, [roomId, userId]);
+  return rows.length > 0;
+};
+
+
 module.exports = chatModel;
