@@ -56,7 +56,7 @@ communityModel.getPosts = async (cursor, limit) => {
       p.user_nickname AS writer_nickname, p.user_profile_img AS writer_profile_img, c.create_at
     FROM ${MAIN_SCHEMA}.community c
     JOIN ${USER_SCHEMA}.profiles p ON c.community_writer = p.user_id
-    WHERE c.deleted = false
+    WHERE p.deleted = false
   `;
 
   const values = [];
