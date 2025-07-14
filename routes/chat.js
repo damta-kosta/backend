@@ -76,7 +76,8 @@ router.put("/:roomId/check_attendance", async (req, res) => {
 
     return res.status(200).json({
       message: "모든 출석 처리가 완료되었습니다.",
-      updatedCount: result.updated
+      updatedCount: result.updated,
+      attendanceCheckedAt: new Date().toISOString(),
     });
   } catch (err) {
     console.error("수동 출석 체크 오류:", err);
