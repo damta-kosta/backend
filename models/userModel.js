@@ -123,6 +123,23 @@ userModel.updateProfileImage = async(userId, userProfileImg) => {
 }
 
 /**
+ * 임시로 like_temp 변경
+ * @param {string} userId - 사용자 UUID
+ * @param {number} likeTemp - 새로 설정할 like_temp
+ * @returns {Promise}
+ */
+userModel.updateLikeTemp = async (userId, likeTemp) => {
+  const now = new Date();
+  const query = `
+    UPDATE ${USER_SCHEMA}.profiles
+    SET like_temp = $1, update_at = $2
+    WHERE user_id = $3 AND deleted = false
+  `;
+
+  return db.query(query, [likeTemp, now, userId]);
+};
+
+/**
  * 회원 탈퇴 (Soft Delete 처리)
  * @param {string} userId - 사용자 UUID
  * @param {boolean} deleted - 탈퇴 여부 (true)

@@ -131,6 +131,32 @@ router.put("/me/profileImg", async(req, res) => {
   }
 });
 
+// PUT /users/me/like_temp - 임시 like_temp 조작용
+router.put("/me/like_temp", async (req, res) => {
+  try {
+    if (!req.user)
+      return res.status(401).json({ message: "유효하지 않은 토큰입니다." });
+
+    const { like_temp } = req.body;
+
+    if (
+      typeof like_temp !== "number" ||
+      like_temp < 0 ||
+      like_temp > 100
+    ) {
+      return res.status(400).json({
+        message: "like_temp는 0 이상 100 이하의 숫자여야 합니다.",
+      });
+    }
+
+    await userModel.updateLikeTemp(req.user.user_id, like_temp);
+    return res.json({ message: "like_temp가 성공적으로 변경되었습니다." });
+  } catch (err) {
+    console.error("like_temp 변경 오류:", err);
+    return res.status(500).json({ message: "서버 오류" });
+  }
+});
+
 // DELETE /users/me/delete - 회원 탈퇴 처리 (soft delete)
 router.delete("/me/delete", async (req, res) => {
   try {
