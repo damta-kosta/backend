@@ -77,7 +77,7 @@ commentModel.getComments = async (communityId, cursor, limit) => {
   }
 
   query += `
-    ORDER BY create_at ASC
+    ORDER BY create_at DESC
     LIMIT $${values.length + 1}
   `;
 
